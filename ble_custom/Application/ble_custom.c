@@ -1,6 +1,6 @@
 /******************************************************************************
 
-   @file  project_zero.c
+   @file  project bluetooth.c
 
    @brief This file contains the Project Zero sample application for use
         with the CC2650 Bluetooth Low Energy Protocol Stack.
@@ -2566,7 +2566,6 @@ static char * util_getLocalNameStr(const uint8_t *data, uint8_t len)
     return(localNameStr);
 }
 
-//Commento di prova
 
 /*********************************************************************
 *********************************************************************/
