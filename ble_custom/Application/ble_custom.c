@@ -8,7 +8,7 @@
    Group: WCS, BTS
    Target Device: cc13x2_26x2
 
- *********************************************************************************
+ **********************************************************************************
    
  Copyright (c) 2015-2020, Texas Instruments Incorporated
  All rights reserved.
@@ -354,7 +354,8 @@ static void ProjectZero_DataService_ValueChangeHandler(
     pzCharacteristicData_t *pCharData);
 static void ProjectZero_DataService_CfgChangeHandler(
     pzCharacteristicData_t *pCharData);
-
+static void ProjectZero_TempService_CfgChangeHandler(
+    pzCharacteristicData_t *pCharData);
 /* Stack or profile callback function */
 static void ProjectZero_advCallback(uint32_t event,
                                     void *pBuf,
@@ -384,7 +385,10 @@ static void ProjectZero_DataService_CfgChangeCB(uint16_t connHandle,
                                                 uint8_t paramID,
                                                 uint16_t len,
                                                 uint8_t *pValue);
-
+static void ProjectZero_TempService_CfgChangeCB(uint16_t connHandle,
+                                                uint8_t paramID,
+                                                uint16_t len,
+                                                uint8_t *pValue);
 /* Connection handling functions */
 static uint8_t ProjectZero_getConnIndex(uint16_t connHandle);
 static uint8_t ProjectZero_clearConnListEntry(uint16_t connHandle);
@@ -456,6 +460,14 @@ static DataServiceCBs_t ProjectZero_Data_ServiceCBs =
 {
     .pfnChangeCb = ProjectZero_DataService_ValueChangeCB,  // Characteristic value change callback handler
     .pfnCfgChangeCb = ProjectZero_DataService_CfgChangeCB, // Noti/ind configuration callback handler
+};
+
+// Temp Service callback handler.
+// The type Temp_ServiceCBs_t is defined in temp_service.h
+static TempServiceCBs_t ProjectZero_Temp_ServiceCBs =
+{
+    .pfnChangeCb = ProjectZero_TempService_ValueChangeCB,  // Characteristic value change callback handler
+    .pfnCfgChangeCb = ProjectZero_TempService_CfgChangeCB, // Noti/ind configuration callback handler
 };
 
 /*********************************************************************
@@ -584,12 +596,15 @@ static void ProjectZero_init(void)
     LedService_AddService(selfEntity);
     ButtonService_AddService(selfEntity);
     DataService_AddService(selfEntity);
+    TempService_AddService(selfEntity);
 
     // Register callbacks with the generated services that
     // can generate events (writes received) to the application
     LedService_RegisterAppCBs(&ProjectZero_LED_ServiceCBs);
     ButtonService_RegisterAppCBs(&ProjectZero_Button_ServiceCBs);
     DataService_RegisterAppCBs(&ProjectZero_Data_ServiceCBs);
+    TempService_RegisterAppCBs(&ProjectZero_Temp_ServiceCBs);
+
 
     // Placeholder variable for characteristic intialization
     uint8_t initVal[40] = {0};
@@ -606,6 +621,9 @@ static void ProjectZero_init(void)
     // Initalization of characteristics in Data_Service that can provide data.
     DataService_SetParameter(DS_STRING_ID, sizeof(initString), initString);
     DataService_SetParameter(DS_STREAM_ID, DS_STREAM_LEN, initVal);
+
+    // Initalization of characteristics in Temp_Service that can provide data.
+    TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, initVal);
 
     // Start Bond Manager and register callback
     VOID GAPBondMgr_Register(&ProjectZero_BondMgrCBs);
@@ -1884,6 +1902,7 @@ void ProjectZero_LedService_ValueChangeHandler(
     }
 }
 
+
 /*
  * @brief   Handle a CCCD (configuration change) write received from a peer
  *          device. This tells us whether the peer device wants us to send
@@ -1939,6 +1958,53 @@ void ProjectZero_ButtonService_CfgChangeHandler(
         // wants to know the state of this characteristic.
         // ...
         break;
+    }
+}
+
+/*
+ * @brief   Handle a CCCD (configuration change) write received from a peer
+ *          device. This tells us whether the peer device wants us to send
+ *          Notifications or Indications.
+ *
+ * @param   pCharData  pointer to malloc'd char write data
+ *
+ * @return  None.
+ */
+void ProjectZero_TempService_CfgChangeHandler(
+    pzCharacteristicData_t *pCharData)
+{
+    // Cast received data to uint16, as that's the format for CCCD writes.
+    uint16_t configValue = *(uint16_t *)pCharData->data;
+    char *configValString;
+
+    // Determine what to tell the user
+    switch(configValue)
+    {
+    case GATT_CFG_NO_OPERATION:
+        configValString = "Noti/Ind disabled";
+        break;
+    case GATT_CLIENT_CFG_NOTIFY:
+        configValString = "Notifications enabled";
+        break;
+    case GATT_CLIENT_CFG_INDICATE:
+        configValString = "Indications enabled";
+        break;
+    default:
+        configValString = "Unsupported operation";
+    }
+
+    switch(pCharData->paramID)
+    {
+    case TS_TEMP_ID:
+        Log_info3("CCCD Change msg: %s %s: %s",
+                  (uintptr_t)"Temp Service",
+                  (uintptr_t)configValString);
+        // -------------------------
+        // Do something useful with configValue here. It tells you whether someone
+        // wants to know the state of this characteristic.
+        // ...
+        break;
+
     }
 }
 
@@ -2201,6 +2267,7 @@ static void ProjectZero_LedService_ValueChangeCB(uint16_t connHandle,
     }
 }
 
+
 /*********************************************************************
  * @fn      ProjectZero_DataService_ValueChangeCB
  *
@@ -2260,6 +2327,40 @@ static void ProjectZero_ButtonService_CfgChangeCB(uint16_t connHandle,
     if(pValChange != NULL)
     {
         pValChange->svcUUID = BUTTON_SERVICE_SERV_UUID;
+        pValChange->paramID = paramID;
+        memcpy(pValChange->data, pValue, len);
+        pValChange->dataLen = len;
+
+        if(ProjectZero_enqueueMsg(PZ_SERVICE_CFG_EVT, pValChange) != SUCCESS)
+        {
+          ICall_free(pValChange);
+        }
+    }
+}
+/*********************************************************************
+ * @fn      ProjectZero_TempService_CfgChangeCB
+ *
+ * @brief   Callback for when a peer enables or disables the CCCD attribute,
+ *          indicating they are interested in notifications or indications.
+ *
+ * @param   connHandle - connection handle
+ *          paramID - the parameter ID maps to the characteristic written to
+ *          len - length of the data written
+ *          pValue - pointer to the data written
+ */
+static void ProjectZero_TempService_CfgChangeCB(uint16_t connHandle,
+                                                  uint8_t paramID, uint16_t len,
+                                                  uint8_t *pValue)
+{
+    Log_info1("(CB) Temp Svc Char config change paramID(%d). "
+              "Sending msg to app.", paramID);
+
+    pzCharacteristicData_t *pValChange =
+        ICall_malloc(sizeof(pzCharacteristicData_t) + len);
+
+    if(pValChange != NULL)
+    {
+        pValChange->svcUUID = TEMP_SERVICE_SERV_UUID;
         pValChange->paramID = paramID;
         memcpy(pValChange->data, pValue, len);
         pValChange->dataLen = len;
