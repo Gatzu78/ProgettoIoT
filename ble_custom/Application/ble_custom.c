@@ -2566,5 +2566,7 @@ static char * util_getLocalNameStr(const uint8_t *data, uint8_t len)
     return(localNameStr);
 }
 
+//Commento di prova
+
 /*********************************************************************
 *********************************************************************/
