@@ -1,16 +1,11 @@
 package ch.supsi.iotemperature;
 
+import android.Manifest;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
-
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.navigation.NavController;
@@ -18,9 +13,11 @@ import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
 import androidx.navigation.ui.NavigationUI;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+
 public class MainActivity extends AppCompatActivity {
-    private static final int REQUEST_ENABLE_BT = 1;
-    private BluetoothAdapter myBluetooth = null;
+    private static final int REQUEST_BT_PERMISSIONS = 0;
+    private static final int REQUEST_BT_ENABLE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,24 +38,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void checkBluetooth() {
-        //if the device has bluetooth
-        myBluetooth = BluetoothAdapter.getDefaultAdapter();
-
-        if(myBluetooth == null)
-        {
-            String msg = "Bluetooth Device is not available on this device.";
-            //Show a message that the device has no bluetooth adapter
-            Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_LONG).show();
-
-            //finish apk
-            //finish();
+        if (!getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)) {
+            Toast.makeText(getApplicationContext(), R.string.ble_not_supported, Toast.LENGTH_LONG).show();
         }
-        else if(!myBluetooth.isEnabled())
-        {
-            //Ask to the user turn the bluetooth on
-            Intent enableBluetoothIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-            startActivityForResult(enableBluetoothIntent, REQUEST_ENABLE_BT);
+
+        BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+        this.requestPermissions(
+                new String[]{
+                        Manifest.permission.BLUETOOTH,
+                        Manifest.permission.BLUETOOTH_ADMIN,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                },
+                REQUEST_BT_PERMISSIONS);
+
+        // Ensures Bluetooth is available on the device and it is enabled. If not,
+        // displays a dialog requesting user permission to enable Bluetooth.
+        if (adapter == null || !adapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, REQUEST_BT_ENABLE);
         }
     }
-
 }

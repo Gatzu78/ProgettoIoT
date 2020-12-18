@@ -2,11 +2,16 @@ package ch.supsi.iotemperature.ui.home;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothSocket;
+import android.bluetooth.BluetoothGatt;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
+import android.bluetooth.le.BluetoothLeScanner;
+import android.bluetooth.le.ScanCallback;
+import android.bluetooth.le.ScanResult;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
+import android.os.Handler;
 import android.util.Log;
 
 import androidx.lifecycle.LiveData;
@@ -14,39 +19,68 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+
+import ch.supsi.iotemperature.BluetoothLeService;
 
 public class HomeViewModel extends ViewModel {
-    private final BluetoothAdapter myBluetooth;
-    private final MutableLiveData<String> mText;
-    private final MutableLiveData<List<BluetoothDevice>> iotDevices;
+    private final static String TAG = HomeViewModel.class.getSimpleName();
 
-    public MutableLiveData<Boolean> getRefreshEnabled() {
-        return refreshEnabled;
+    private final BluetoothAdapter mBluetooth = BluetoothAdapter.getDefaultAdapter();
+    private final BluetoothLeScanner mBleScanner = mBluetooth.getBluetoothLeScanner();
+
+    private final MutableLiveData<Boolean> mScanning;
+    private final MutableLiveData<String> mText;
+    private final MutableLiveData<List<BluetoothDevice>> mIotDevices;
+
+    private Handler handler = new Handler();
+    private ArrayList<ArrayList<BluetoothGattCharacteristic>> mGattCharacteristics;
+
+    // Stops scanning after 10 seconds.
+    private static final long SCAN_PERIOD = 10000;
+
+    public HomeViewModel() {
+        mScanning = new MutableLiveData<>(false);
+        mIotDevices = new MutableLiveData<>(new ArrayList<>());
+        mText = new MutableLiveData<>();
+        mText.setValue("SUPSI IoT devices");
     }
 
-    private final MutableLiveData<Boolean> refreshEnabled;
+    // Device scan callback.
+    private ScanCallback bleScanCallback = new ScanCallback() {
+                @Override
+                public void onScanResult(int callbackType, ScanResult result) {
+                    super.onScanResult(callbackType, result);
 
-    private BroadcastReceiver bluetoothReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String action = intent.getAction();
-            if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                if(isSupsiDevice(device)) {
-                    iotDevices.getValue().add(device);
-                    iotDevices.setValue(iotDevices.getValue());
+                    BluetoothDevice device = result.getDevice();
+                    if(isSupsiDevice(device)) {
+                        mIotDevices.getValue().add(device);
+                        mIotDevices.setValue(mIotDevices.getValue());
+                    }
                 }
-            } else if (BluetoothAdapter.ACTION_DISCOVERY_STARTED.equals(action)) {
-                Log.e("bluetoothReceiver", "ACTION_DISCOVERY_STARTED");
-            } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
-                Log.e("bluetoothReceiver", "ACTION_DISCOVERY_FINISHED");
-                context.unregisterReceiver(bluetoothReceiver);
-                refreshEnabled.setValue(true);
-            }
+            };
+
+    private void scanBleDevice() {
+        if (!mScanning.getValue()) {
+            mIotDevices.getValue().clear();
+            // Stops scanning after a pre-defined scan period.
+            handler.postDelayed(() -> {
+                mScanning.setValue(false);
+                stopScan();
+            }, SCAN_PERIOD);
+
+            mScanning.setValue(true);
+            mBleScanner.startScan(bleScanCallback);
+        } else {
+            mScanning.setValue(false);
+            stopScan();
         }
-    };
+    }
+
+    public void stopScan() {
+        mBleScanner.stopScan(bleScanCallback);
+    }
 
     private boolean isSupsiDevice(BluetoothDevice device) {
         return device.getName() != null &&
@@ -59,35 +93,60 @@ public class HomeViewModel extends ViewModel {
     }
 
 
-    public HomeViewModel() {
-        refreshEnabled = new MutableLiveData<>(true);
-        myBluetooth = BluetoothAdapter.getDefaultAdapter();
-        iotDevices = new MutableLiveData<>(new ArrayList<>());
-        mText = new MutableLiveData<>();
-        mText.setValue("SUPSI IoT devices");
+    public MutableLiveData<Boolean> getIsScanning() {
+        return mScanning;
     }
-
     public LiveData<String> getText() {
         return mText;
     }
-    public LiveData<List<BluetoothDevice>> getIoTDevices() { return iotDevices; }
+
+    public LiveData<List<BluetoothDevice>> getIoTDevices() { return mIotDevices; }
 
     public void refreshDevices(Context context) {
-        if(myBluetooth == null) {
-            mText.setValue("Bluetooth not available on this device");
-        } else {
-            refreshEnabled.setValue(false);
-            // Register for broadcasts when a device is discovered.
-            IntentFilter bluetoothFilter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-            bluetoothFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-            bluetoothFilter.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-            context.registerReceiver(bluetoothReceiver, bluetoothFilter);
-
-            myBluetooth.startDiscovery();
-        }
+        scanBleDevice();
     }
 
-    public void pair(Context context, BluetoothDevice device) {
-        device.createBond();
+    // Demonstrates how to iterate through the supported GATT
+    // Services/Characteristics.
+    // In this sample, we populate the data structure that is bound to the
+    // ExpandableListView on the UI.
+    private void displayGattServices(List<BluetoothGattService> gattServices) {
+        if (gattServices == null) return;
+        String uuid = null;
+        String unknownServiceString = "unkown_service";
+        String unknownCharaString = "unknown_characteristic";
+
+        ArrayList<HashMap<String, String>> gattServiceData = new ArrayList<>();
+        ArrayList<ArrayList<HashMap<String, String>>> gattCharacteristicData = new ArrayList<>();
+        mGattCharacteristics = new ArrayList<>();
+
+        // Loops through available GATT Services.
+        for (BluetoothGattService gattService : gattServices) {
+            HashMap<String, String> currentServiceData = new HashMap<>();
+            uuid = gattService.getUuid().toString();
+            Log.i(TAG, uuid);
+//            currentServiceData.put(
+//                    LIST_NAME, SampleGattAttributes.lookup(uuid, unknownServiceString));
+//            currentServiceData.put(LIST_UUID, uuid);
+//            gattServiceData.add(currentServiceData);
+//
+//            ArrayList<HashMap<String, String>> gattCharacteristicGroupData = new ArrayList<>();
+//            List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
+//            ArrayList<BluetoothGattCharacteristic> charas = new ArrayList<>();
+//            // Loops through available Characteristics.
+//            for (BluetoothGattCharacteristic gattCharacteristic :
+//                    gattCharacteristics) {
+//                charas.add(gattCharacteristic);
+//                HashMap<String, String> currentCharaData =
+//                        new HashMap<>();
+//                uuid = gattCharacteristic.getUuid().toString();
+//                currentCharaData.put(LIST_NAME,
+//                                SampleGattAttributes.lookup(uuid, unknownCharaString));
+//                currentCharaData.put(LIST_UUID, uuid);
+//                gattCharacteristicGroupData.add(currentCharaData);
+//            }
+//            mGattCharacteristics.add(charas);
+//            gattCharacteristicData.add(gattCharacteristicGroupData);
+        }
     }
 }

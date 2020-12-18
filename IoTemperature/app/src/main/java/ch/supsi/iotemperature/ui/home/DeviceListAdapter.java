@@ -39,4 +39,8 @@ public class DeviceListAdapter extends ArrayAdapter<BluetoothDevice> {
 
         return convertView;
     }
+
+    public void addDevice(BluetoothDevice device) {
+        this.add(device);
+    }
 }
