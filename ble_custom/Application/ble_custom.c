@@ -78,6 +78,7 @@
 #include <profiles/project_zero/button_service.h>
 #include <profiles/project_zero/led_service.h>
 #include <profiles/project_zero/data_service.h>
+#include <profiles/temp_service.h>
 
 /* Application specific includes */
 #include <ti_drivers_config.h>
@@ -85,6 +86,7 @@
 #include <project_zero.h>
 #include "ti_ble_config.h"
 #include <util.h>
+
 
 /*********************************************************************
  * MACROS
@@ -356,6 +358,7 @@ static void ProjectZero_DataService_CfgChangeHandler(
     pzCharacteristicData_t *pCharData);
 static void ProjectZero_TempService_CfgChangeHandler(
     pzCharacteristicData_t *pCharData);
+
 /* Stack or profile callback function */
 static void ProjectZero_advCallback(uint32_t event,
                                     void *pBuf,
@@ -389,6 +392,10 @@ static void ProjectZero_TempService_CfgChangeCB(uint16_t connHandle,
                                                 uint8_t paramID,
                                                 uint16_t len,
                                                 uint8_t *pValue);
+static void ProjectZero_TempService_ValueChangeCB(uint16_t connHandle,
+                                                  uint8_t paramID,
+                                                  uint16_t len,
+                                                  uint8_t *pValue);
 /* Connection handling functions */
 static uint8_t ProjectZero_getConnIndex(uint16_t connHandle);
 static uint8_t ProjectZero_clearConnListEntry(uint16_t connHandle);
@@ -849,6 +856,9 @@ static void ProjectZero_processApplicationMessage(pzMsg_t *pMsg)
                 break;
             case DATA_SERVICE_SERV_UUID:
                 ProjectZero_DataService_CfgChangeHandler(pCharData);
+                break;
+            case TEMP_SERVICE_SERV_UUID:
+                ProjectZero_TempService_CfgChangeHandler(pCharData);
                 break;
           }
           break;
@@ -1996,8 +2006,9 @@ void ProjectZero_TempService_CfgChangeHandler(
     switch(pCharData->paramID)
     {
     case TS_TEMP_ID:
-        Log_info3("CCCD Change msg: %s %s: %s",
+        Log_info3("CCCD Change msg: %s : %s",
                   (uintptr_t)"Temp Service",
+                  (uintptr_t)"Temp",
                   (uintptr_t)configValString);
         // -------------------------
         // Do something useful with configValue here. It tells you whether someone
@@ -2303,6 +2314,40 @@ static void ProjectZero_DataService_ValueChangeCB(uint16_t connHandle,
     }
 }
 
+/*********************************************************************
+ * @fn      ProjectZero_TempService_ValueChangeCB
+ *
+ * @brief   Callback for characteristic change when a peer writes to us
+ *
+ * @param   connHandle - connection handle
+ *          paramID - the parameter ID maps to the characteristic written to
+ *          len - length of the data written
+ *          pValue - pointer to the data written
+ */
+static void ProjectZero_TempService_ValueChangeCB(uint16_t connHandle,
+                                                  uint8_t paramID, uint16_t len,
+                                                  uint8_t *pValue)
+{
+    // See the service header file to compare paramID with characteristic.
+    Log_info1("(CB) Temp Svc Characteristic value change: paramID(%d). "
+              "Sending msg to app.", paramID);
+
+    pzCharacteristicData_t *pValChange =
+        ICall_malloc(sizeof(pzCharacteristicData_t) + len);
+
+    if(pValChange != NULL)
+    {
+        pValChange->svcUUID = TEMP_SERVICE_SERV_UUID;
+        pValChange->paramID = paramID;
+        memcpy(pValChange->data, pValue, len);
+        pValChange->dataLen = len;
+
+        if(ProjectZero_enqueueMsg(PZ_SERVICE_WRITE_EVT, pValChange) != SUCCESS)
+        {
+          ICall_free(pValChange);
+        }
+    }
+}
 /*********************************************************************
  * @fn      ProjectZero_ButtonService_CfgChangeCB
  *

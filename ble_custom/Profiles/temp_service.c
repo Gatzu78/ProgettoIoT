@@ -49,43 +49,34 @@ CONST uint8_t TempServiceUUID[ATT_UUID_SIZE] =
 };
 
 // Temp UUID
-CONST uint8_t ls_tempUUID[ATT_UUID_SIZE] =
+CONST uint8_t ts_TempUUID[ATT_UUID_SIZE] =
 {
-    LS_TEMP_UUID_BASE128(LS_TEMP_UUID)
+    TS_TEMP_UUID_BASE128(TS_TEMP_UUID)
 };
 
 /*********************************************************************
  * LOCAL VARIABLES
  */
 
-static LedServiceCBs_t *pAppCBs = NULL;
+static TempServiceCBs_t *pAppCBs = NULL;
 
 /*********************************************************************
  * Profile Attributes - variables
  */
 
 // Service declaration
-static CONST gattAttrType_t LedServiceDecl = { ATT_UUID_SIZE, LedServiceUUID };
+static CONST gattAttrType_t TempServiceDecl = { ATT_UUID_SIZE, TempServiceUUID };
 
 // Characteristic "Temp" Properties (for declaration)
-static uint8_t ls_TempProps = GATT_PROP_READ | GATT_PROP_WRITE |
+static uint8_t ts_TempProps = GATT_PROP_READ | GATT_PROP_WRITE |
                               GATT_PROP_WRITE_NO_RSP;
 
 // Characteristic "Temp" Value variable
-static uint8_t ls_TempVal[LS_Temp_LEN] = {0};
+static uint8_t ts_TempVal[TS_TEMP_LEN] = {0};
 
 // Length of data in characteristic "Temp" Value variable, initialized to minimal size.
-static uint16_t ls_TempValLen = LS_Temp_LEN_MIN;
+static uint16_t ts_TempValLen = TS_TEMP_LEN_MIN;
 
-// Characteristic "LED1" Properties (for declaration)
-static uint8_t ls_LED1Props = GATT_PROP_READ | GATT_PROP_WRITE |
-                              GATT_PROP_WRITE_NO_RSP;
-
-// Characteristic "LED1" Value variable
-static uint8_t ls_LED1Val[LS_LED1_LEN] = {0};
-
-// Length of data in characteristic "LED1" Value variable, initialized to minimal size.
-static uint16_t ls_LED1ValLen = LS_LED1_LEN_MIN;
 
 /*********************************************************************
  * Profile Attributes - Table
@@ -98,35 +89,21 @@ static gattAttribute_t Temp_ServiceAttrTbl[] =
         { ATT_BT_UUID_SIZE, primaryServiceUUID },
         GATT_PERMIT_READ,
         0,
-        (uint8_t *)&LedServiceDecl
+        (uint8_t *)&TempServiceDecl
     },
     // Temp Characteristic Declaration
     {
         { ATT_BT_UUID_SIZE, characterUUID },
         GATT_PERMIT_READ,
         0,
-        &ls_TempProps
+        &ts_TempProps
     },
     // Temp Characteristic Value
     {
-        { ATT_UUID_SIZE, ls_TempUUID },
+        { ATT_UUID_SIZE, ts_TempUUID },
         GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
         0,
-        ls_TempVal
-    },
-    // LED1 Characteristic Declaration
-    {
-        { ATT_BT_UUID_SIZE, characterUUID },
-        GATT_PERMIT_READ,
-        0,
-        &ls_LED1Props
-    },
-    // LED1 Characteristic Value
-    {
-        { ATT_UUID_SIZE, ls_LED1UUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
-        0,
-        ls_LED1Val
+        ts_TempVal
     },
 };
 
@@ -226,10 +203,10 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
     switch(param)
     {
     case TS_TEMP_ID:
-        pAttrVal = ls_TempVal;
-        pValLen = &ls_TempValLen;
-        valMinLen = LS_Temp_LEN_MIN;
-        valMaxLen = LS_Temp_LEN;
+        pAttrVal = ts_TempVal;
+        pValLen = &ts_TempValLen;
+        valMinLen = TS_TEMP_LEN_MIN;
+        valMaxLen = TS_TEMP_LEN;
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Temp", len);
         break;
 
@@ -256,7 +233,7 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
 }
 
 /*
- * LedService_GetParameter - Get a LedService parameter.
+ * TempService_GetParameter - Get a LedService parameter.
  *
  *    param - Profile parameter ID
  *    len   - pointer to a variable that contains the maximum length that can be written to *value.
@@ -266,22 +243,15 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
  *            data type (example: data type of uint16_t will be cast to
  *            uint16_t pointer).
  */
-bStatus_t LedService_GetParameter(uint8_t param, uint16_t *len, void *value)
+bStatus_t TempService_GetParameter(uint8_t param, uint16_t *len, void *value)
 {
     bStatus_t ret = SUCCESS;
     switch(param)
     {
-    case LS_Temp_ID:
-        *len = MIN(*len, ls_TempValLen);
-        memcpy(value, ls_TempVal, *len);
+    case TS_TEMP_ID:
+        *len = MIN(*len, ts_TempValLen);
+        memcpy(value, ts_TempVal, *len);
         Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"Temp",
-                  *len);
-        break;
-
-    case LS_LED1_ID:
-        *len = MIN(*len, ls_LED1ValLen);
-        memcpy(value, ls_LED1Val, *len);
-        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"LED1",
                   *len);
         break;
 
@@ -295,7 +265,7 @@ bStatus_t LedService_GetParameter(uint8_t param, uint16_t *len, void *value)
 
 /*********************************************************************
  * @internal
- * @fn          LED_Service_findCharParamId
+ * @fn          Temp_Service_findCharParamId
  *
  * @brief       Find the logical param id of an attribute in the service's attr table.
  *
@@ -306,25 +276,19 @@ bStatus_t LedService_GetParameter(uint8_t param, uint16_t *len, void *value)
  *
  * @return      uint8_t paramID (ref led_service.h) or 0xFF if not found.
  */
-static uint8_t LED_Service_findCharParamId(gattAttribute_t *pAttr)
+static uint8_t TEMP_Service_findCharParamId(gattAttribute_t *pAttr)
 {
     // Is this a Client Characteristic Configuration Descriptor?
     if(ATT_BT_UUID_SIZE == pAttr->type.len && GATT_CLIENT_CHAR_CFG_UUID ==
        *(uint16_t *)pAttr->type.uuid)
     {
-        return(LED_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
+        return(Temp_Service_findCharParamId(pAttr - 1)); // Assume the value attribute precedes CCCD and recurse
     }
     // Is this attribute in "Temp"?
     else if(ATT_UUID_SIZE == pAttr->type.len &&
-            !memcmp(pAttr->type.uuid, ls_TempUUID, pAttr->type.len))
+            !memcmp(pAttr->type.uuid, ts_TempUUID, pAttr->type.len))
     {
-        return(LS_Temp_ID);
-    }
-    // Is this attribute in "LED1"?
-    else if(ATT_UUID_SIZE == pAttr->type.len &&
-            !memcmp(pAttr->type.uuid, ls_LED1UUID, pAttr->type.len))
-    {
-        return(LS_LED1_ID);
+        return(TS_TEMP_ID);
     }
     else
     {
@@ -333,7 +297,7 @@ static uint8_t LED_Service_findCharParamId(gattAttribute_t *pAttr)
 }
 
 /*********************************************************************
- * @fn          LED_Service_ReadAttrCB
+ * @fn          Temp_Service_ReadAttrCB
  *
  * @brief       Read an attribute.
  *
@@ -347,7 +311,7 @@ static uint8_t LED_Service_findCharParamId(gattAttribute_t *pAttr)
  *
  * @return      SUCCESS, blePending or Failure
  */
-static bStatus_t LED_Service_ReadAttrCB(uint16_t connHandle,
+static bStatus_t Temp_Service_ReadAttrCB(uint16_t connHandle,
                                         gattAttribute_t *pAttr,
                                         uint8_t *pValue, uint16_t *pLen,
                                         uint16_t offset,
@@ -359,11 +323,11 @@ static bStatus_t LED_Service_ReadAttrCB(uint16_t connHandle,
     uint8_t paramID = 0xFF;
 
     // Find settings for the characteristic to be read.
-    paramID = LED_Service_findCharParamId(pAttr);
+    paramID = Temp_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case LS_Temp_ID:
-        valueLen = ls_TempValLen;
+    case TS_TEMP_ID:
+        valueLen = ts_TempValLen;
 
         Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
                   (uintptr_t)"Temp",
@@ -371,17 +335,6 @@ static bStatus_t LED_Service_ReadAttrCB(uint16_t connHandle,
                   offset,
                   method);
         /* Other considerations for Temp can be inserted here */
-        break;
-
-    case LS_LED1_ID:
-        valueLen = ls_LED1ValLen;
-
-        Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
-                  (uintptr_t)"LED1",
-                  connHandle,
-                  offset,
-                  method);
-        /* Other considerations for LED1 can be inserted here */
         break;
 
     default:
@@ -404,7 +357,7 @@ static bStatus_t LED_Service_ReadAttrCB(uint16_t connHandle,
 }
 
 /*********************************************************************
- * @fn      LED_Service_WriteAttrCB
+ * @fn      Temp_Service_WriteAttrCB
  *
  * @brief   Validate attribute data prior to a write operation
  *
@@ -417,7 +370,7 @@ static bStatus_t LED_Service_ReadAttrCB(uint16_t connHandle,
  *
  * @return  SUCCESS, blePending or Failure
  */
-static bStatus_t LED_Service_WriteAttrCB(uint16_t connHandle,
+static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
                                          gattAttribute_t *pAttr,
                                          uint8_t *pValue, uint16_t len,
                                          uint16_t offset,
@@ -431,13 +384,13 @@ static bStatus_t LED_Service_WriteAttrCB(uint16_t connHandle,
     uint16_t *pValueLenVar;
 
     // Find settings for the characteristic to be written.
-    paramID = LED_Service_findCharParamId(pAttr);
+    paramID = Temp_Service_findCharParamId(pAttr);
     switch(paramID)
     {
-    case LS_Temp_ID:
-        writeLenMin = LS_Temp_LEN_MIN;
-        writeLenMax = LS_Temp_LEN;
-        pValueLenVar = &ls_TempValLen;
+    case TS_TEMP_ID:
+        writeLenMin = TS_TEMP_LEN_MIN;
+        writeLenMax = TS_TEMP_LEN;
+        pValueLenVar = &ts_TempValLen;
 
         Log_info5(
             "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
@@ -447,21 +400,6 @@ static bStatus_t LED_Service_WriteAttrCB(uint16_t connHandle,
             offset,
             method);
         /* Other considerations for Temp can be inserted here */
-        break;
-
-    case LS_LED1_ID:
-        writeLenMin = LS_LED1_LEN_MIN;
-        writeLenMax = LS_LED1_LEN;
-        pValueLenVar = &ls_LED1ValLen;
-
-        Log_info5(
-            "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
-            (uintptr_t)"LED1",
-            connHandle,
-            len,
-            offset,
-            method);
-        /* Other considerations for LED1 can be inserted here */
         break;
 
     default:

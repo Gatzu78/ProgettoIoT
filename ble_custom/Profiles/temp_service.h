@@ -40,8 +40,8 @@ extern "C"
 #define TS_TEMP_UUID               0x1141
 #define TS_TEMP_UUID_BASE128(uuid) 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
     0xB0, 0x00, 0x40, 0x51, 0x04, LO_UINT16(uuid), HI_UINT16(uuid), 0x00, 0xF0
-#define TS_TEMP_LEN                8
-#define TS_TEMP_LEN_MIN            5
+#define TS_TEMP_LEN                1
+#define TS_TEMP_LEN_MIN            1
 /*********************************************************************
  * TYPEDEFS
  */

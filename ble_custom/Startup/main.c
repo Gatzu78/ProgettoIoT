@@ -150,6 +150,23 @@ int main()
     /* enable interrupts and start SYS/BIOS */
     BIOS_start();
 
+    //PIN_setOutputValue(ledPinHandle, CONFIG_PIN_GLED, pCharData->data[0]); funzione esempio per settare led0
+
+    /** @brief Control output value for GPIO pin
+     *
+     *  @param handle  Handle provided by previous call to PIN_open()
+     *  @param pinId   Pin ID
+     *  @param val     Output value (0/1)
+     *  @return  #PIN_SUCCESS if successful, else error code
+     *  @remark  This function typically has an inlined sibling function in the
+     *           device-specific driver that may be used for higher efficiency
+     *  @par Usage
+     *       @code
+     *       PIN_setOutputValue(hPins, PIN_ID(4), 1);
+     *       @endcode
+     */
+    //extern PIN_Status PIN_setOutputValue(PIN_Handle handle, PIN_Id pinId, uint32_t val);
+
     return(0);
 }
 
