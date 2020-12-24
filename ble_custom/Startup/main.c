@@ -56,6 +56,9 @@
 #include <ti/drivers/power/PowerCC26XX.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/drivers/UART.h>
+#include <ti/drivers/Timer.h>
+#include <ti/drivers/PWM.h>
+#include <profiles/temp_service.h>
 
 // Comment this in to use xdc.runtime.Log, but also remove UartLog_init below.
 //#include <xdc/runtime/Log.h>
@@ -65,6 +68,7 @@
 #include "hal_assert.h"
 #include "bcomdef.h"
 #include "project_zero.h"
+#include "math.h"
 
 #ifndef USE_DEFAULT_USER_CFG
 #include "ble_user_config.h"
@@ -75,7 +79,9 @@ icall_userCfg_t user0Cfg = BLE_USER_CFG;
 /*******************************************************************************
  * MACROS
  */
-
+#ifndef PI
+#define PI 3.14159265
+#endif
 /*******************************************************************************
  * CONSTANTS
  */
@@ -89,8 +95,9 @@ icall_userCfg_t user0Cfg = BLE_USER_CFG;
  */
 
 /*******************************************************************************
- * GLOBAL VARIABLES
- */
+ * GLOBAL VARIABLES*/
+ Timer_Handle    handle[2];
+
 
 /*******************************************************************************
  * EXTERNS
@@ -98,6 +105,21 @@ icall_userCfg_t user0Cfg = BLE_USER_CFG;
 
 extern void AssertHandler(uint8_t assertCause,
                           uint8_t assertSubcause);
+
+void TimerCfg(void);
+void PWMCfg(void);
+
+/*This Function simulates a temperature variation on a sinus 0.1Hz 20° offset and 5° Vpeak
+ * Updates temperature value in temp_tervice*/
+
+void TempSimulator(Timer_Handle handlecaller, int_fast16_t status){
+    int temp=20;
+
+    temp += (int)sin(2 * PI * 0.1 * Timer_getCount(handle[1]) / 1000);
+    TempService_SetParameter(TS_TEMP_ID, sizeof(temp), &temp);
+}
+
+
 
 /*******************************************************************************
  * @fn          Main
@@ -120,6 +142,8 @@ int main()
   RegisterAssertCback(AssertHandler);
 
   Board_initGeneral();
+
+
 
 #if !defined( POWER_SAVING )
   /* Set constraints for Standby, powerdown and idle mode */
@@ -150,7 +174,12 @@ int main()
     /* enable interrupts and start SYS/BIOS */
     BIOS_start();
 
-    //PIN_setOutputValue(ledPinHandle, CONFIG_PIN_GLED, pCharData->data[0]); funzione esempio per settare led0
+    Timer_init();
+    PWM_init();
+    TimerCfg();
+    PWMCfg();
+
+    //PIN_setOutputValue(ledPinHandle, CONFIG_PIN_GLED, pCharData->data[0]); //funzione esempio per settare led0
 
     /** @brief Control output value for GPIO pin
      *
@@ -262,3 +291,48 @@ void AssertHandler(uint8_t assertCause, uint8_t assertSubcause)
 
 /*******************************************************************************
  */
+
+void TimerCfg(){
+    extern Timer_Handle    handle[2];
+    Timer_Params    params;
+
+    Timer_Params_init(&params);
+    params.periodUnits = Timer_PERIOD_HZ;
+    params.period = 1;
+    params.timerMode  = Timer_CONTINUOUS_CALLBACK;
+    params.timerCallback = TempSimulator;
+    handle[0] = Timer_open(CONFIG_TIMER0, &params);
+    Timer_start(handle[0]);
+
+    Timer_Params_init(&params);
+    params.periodUnits = Timer_PERIOD_HZ;
+    params.period = 1000;
+    params.timerMode  = Timer_FREE_RUNNING;
+    handle[1] = Timer_open(CONFIG_TIMER1, &params);
+    Timer_start(handle[1]);
+
+    //sleep(10000);
+}
+
+void PWMCfg(){
+    // Import PWM Driver definitions
+
+    PWM_Handle pwm;
+    PWM_Params pwmParams;
+    uint32_t   dutyValue;
+    // Initialize the PWM driver.
+    PWM_init();
+    // Initialize the PWM parameters
+    PWM_Params_init(&pwmParams);
+    pwmParams.idleLevel = PWM_IDLE_LOW;      // Output low when PWM is not running
+    pwmParams.periodUnits = PWM_PERIOD_HZ;   // Period is in Hz
+    pwmParams.periodValue = 1;               // 1 Hz
+    pwmParams.dutyUnits = PWM_DUTY_FRACTION; // Duty is in fractional percentage
+    pwmParams.dutyValue = 0;                 // 0% initial duty cycle
+    // Open the PWM instance
+    pwm = PWM_open(CONFIG_PWM0, &pwmParams);
+
+    PWM_start(pwm);                          // start PWM with 5% duty cycle
+    dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 5) / 100);
+    PWM_setDuty(pwm, dutyValue);  // set duty cycle to 5%
+}

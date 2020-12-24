@@ -29,11 +29,16 @@ const GPIO4       = GPIO.addInstance();
 const NVS         = scripting.addModule("/ti/drivers/NVS");
 const NVS1        = NVS.addInstance();
 const NVS2        = NVS.addInstance();
+const PWM         = scripting.addModule("/ti/drivers/PWM", {}, false);
+const PWM1        = PWM.addInstance();
 const Power       = scripting.addModule("/ti/drivers/Power");
 const RF          = scripting.addModule("/ti/drivers/RF");
 const RTOS        = scripting.addModule("/ti/drivers/RTOS");
 const TRNG        = scripting.addModule("/ti/drivers/TRNG");
 const TRNG1       = TRNG.addInstance();
+const Timer       = scripting.addModule("/ti/drivers/Timer", {}, false);
+const Timer1      = Timer.addInstance();
+const Timer2      = Timer.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -117,7 +122,18 @@ NVS2.$name                          = "CONFIG_NVSEXTERNAL";
 NVS2.externalFlash.$name            = "ti_drivers_nvs_NVSSPI25X0";
 NVS2.externalFlash.verifyBufferSize = 64;
 
+PWM1.$name                            = "CONFIG_PWM0";
+PWM1.timerObject.$name                = "CONFIG_GPTIMER_2";
+PWM1.timerObject.$hardware            = null;
+PWM1.timerObject.pwmPinInstance.$name = "CONFIG_PIN_4";
+
 TRNG1.$name = "CONFIG_TRNG_0";
+
+Timer1.$name               = "CONFIG_TIMER0";
+Timer1.timerInstance.$name = "CONFIG_GPTIMER_0";
+
+Timer2.$name               = "CONFIG_TIMER1";
+Timer2.timerInstance.$name = "CONFIG_GPTIMER_1";
 
 const NVSSPI25XDevice                                      = scripting.addModule("/ti/drivers/nvs/NVSSPI25XDevice", {}, false);
 const NVSSPI25XDevice1                                     = NVSSPI25XDevice.addInstance({}, false);
@@ -146,6 +162,10 @@ GPIO1.gpioPin.$suggestSolution                                    = "boosterpack
 GPIO2.gpioPin.$suggestSolution                                    = "boosterpack.12";
 GPIO3.gpioPin.$suggestSolution                                    = "boosterpack.39";
 GPIO4.gpioPin.$suggestSolution                                    = "boosterpack.40";
+PWM1.timerObject.timer.$suggestSolution                           = "GPTM0";
+PWM1.timerObject.timer.pwmPin.$suggestSolution                    = "boosterpack.29";
+Timer1.timerInstance.timer.$suggestSolution                       = "GPTM1";
+Timer2.timerInstance.timer.$suggestSolution                       = "GPTM1";
 NVSSPI25XDevice1.slaveSelectGpioInstance.gpioPin.$suggestSolution = "boosterpack.38";
 SPI1.spi.$suggestSolution                                         = "SSI0";
 SPI1.spi.sclkPin.$suggestSolution                                 = "boosterpack.7";

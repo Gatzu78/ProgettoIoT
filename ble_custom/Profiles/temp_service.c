@@ -276,7 +276,7 @@ bStatus_t TempService_GetParameter(uint8_t param, uint16_t *len, void *value)
  *
  * @return      uint8_t paramID (ref led_service.h) or 0xFF if not found.
  */
-static uint8_t TEMP_Service_findCharParamId(gattAttribute_t *pAttr)
+static uint8_t Temp_Service_findCharParamId(gattAttribute_t *pAttr)
 {
     // Is this a Client Characteristic Configuration Descriptor?
     if(ATT_BT_UUID_SIZE == pAttr->type.len && GATT_CLIENT_CHAR_CFG_UUID ==
