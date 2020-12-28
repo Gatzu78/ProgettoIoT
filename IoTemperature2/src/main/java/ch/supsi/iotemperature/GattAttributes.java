@@ -24,16 +24,23 @@ import java.util.UUID;
  */
 public class GattAttributes {
     private static HashMap<String, String> attributes = new HashMap();
+    public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
+
     public static String HEART_RATE_SERVICE ="0000180d-0000-1000-8000-00805f9b34fb";
     public static String HEART_RATE_MEASUREMENT_CHAR = "00002a37-0000-1000-8000-00805f9b34fb";
     public static String HEART_RATE_CONTROLPOINT_CHAR = "00002a39-0000-1000-8000-00805f9b34fb";
-    public static String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
+
+    public static String MI_BAND2_BASIC_SERVICE = "0000fee0-0000-1000-8000-00805f9b34fb";
+    public static String CURRENT_TIME_CHAR = "00002a2b-0000-1000-8000-00805f9b34fb";
 
     public static String LED_SERVICE = "F0001110-0451-4000-B000-000000000000";
     public static String LED0_CHARACTERISTIC = "F0001111-0451-4000-B000-000000000000";
     public static String LED1_CHARACTERISTIC = "F0001112-0451-4000-B000-000000000000";
 
     static {
+        // MI_BAND2_BASIC_SERVICE
+        attributes.put(MI_BAND2_BASIC_SERVICE, "MI Band Basic Service");
+
         // SUPSI BLE
         attributes.put(LED_SERVICE, "SUPSI LED Service");
         attributes.put(LED0_CHARACTERISTIC, "LED0 Characteristic");
@@ -124,7 +131,7 @@ public class GattAttributes {
         attributes.put("00002a28-0000-1000-8000-00805f9b34fb", "Software Revision String Characteristic");
         attributes.put("00002a29-0000-1000-8000-00805f9b34fb", "Manufacturer Name String Characteristic");
         attributes.put("00002a2a-0000-1000-8000-00805f9b34fb", "IEEE 11073-20601 Regulatory Certification Data List Characteristic");
-        attributes.put("00002a2b-0000-1000-8000-00805f9b34fb", "Current Time Characteristic");
+        attributes.put(CURRENT_TIME_CHAR, "Current Time Characteristic");
         attributes.put("00002a2c-0000-1000-8000-00805f9b34fb", "Magnetic Declination Characteristic");
         attributes.put("00002a2f-0000-1000-8000-00805f9b34fb", "Position 2D Characteristic");
         attributes.put("00002a30-0000-1000-8000-00805f9b34fb", "Position 3D Characteristic");
@@ -298,14 +305,6 @@ public class GattAttributes {
         attributes.put("00002b1d-0000-1000-8000-00805f9b34fb", "RC Feature Characteristic");
         attributes.put("00002b1e-0000-1000-8000-00805f9b34fb", "RC Settings Characteristic");
         attributes.put("00002b1f-0000-1000-8000-00805f9b34fb", "Reconnection Configuration Control Point Characteristic");
-    }
-
-    public static String lookup(String uuid) {
-        return lookup(uuid, "--");
-    }
-
-    public static String lookup(UUID uuid) {
-        return lookup(uuid.toString(), "--");
     }
 
     public static String lookup(String uuid, String defaultName) {
