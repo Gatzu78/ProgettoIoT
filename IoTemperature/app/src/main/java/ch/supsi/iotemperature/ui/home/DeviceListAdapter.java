@@ -32,15 +32,6 @@ public class DeviceListAdapter extends ArrayAdapter<BluetoothDevice> {
 
         TextView deviceMac = convertView.findViewById(R.id.deviceMac);
         deviceMac.setText(device.getAddress());
-
-        // API LEVEL 30
-//        TextView deviceAlias = convertView.findViewById(R.id.deviceAlias);
-//        deviceAlias.setText(device.getAlias());
-
         return convertView;
-    }
-
-    public void addDevice(BluetoothDevice device) {
-        this.add(device);
     }
 }

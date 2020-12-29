@@ -1,6 +1,7 @@
 package ch.supsi.iotemperature.ui.dashboard;
 
-import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothGattCharacteristic;
+import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -8,32 +9,51 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.util.Log;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import ch.supsi.iotemperature.BluetoothLeService;
 
 import static android.content.Context.BIND_AUTO_CREATE;
+import static ch.supsi.iotemperature.BluetoothLeService.UUID_CURRENT_TIME_CHAR;
 
 public class DashboardViewModel extends ViewModel {
-    private MutableLiveData<BluetoothDevice> mDevice;
+    private final static String TAG = DashboardViewModel.class.getSimpleName();
+
+    private MutableLiveData<String> mDeviceAddress;
+    private MutableLiveData<String> mDeviceName;
     private final MutableLiveData<Boolean> mConnected;
     private final MutableLiveData<String> mConnectionState;
     private BluetoothLeService mBluetoothLeService;
+    private BluetoothGattCharacteristic mNotifyCharacteristic;
+    private final MutableLiveData<List<String>> mData;
 
     public DashboardViewModel() {
+        Log.i(TAG, "**** NEW DashboardViewModel");
+
+        mData = new MutableLiveData<>(new ArrayList<>());
         mConnected = new MutableLiveData<>(false);
         mConnectionState = new MutableLiveData<>();
-        mDevice = new MutableLiveData<>();
+        mDeviceAddress = new MutableLiveData<>();
+        mDeviceName = new MutableLiveData<>();
     }
 
-    public LiveData<BluetoothDevice> getDevice() {
-        return mDevice;
-    }
+    public LiveData<List<String>> getData() { return mData; }
     public LiveData<String> getConnectionState() {
         return mConnectionState;
+    }
+    public LiveData<String> getDeviceName() {
+        return mDeviceName;
+    }
+    public LiveData<String> getDeviceAddress() {
+        return mDeviceAddress;
     }
 
     // Code to manage Service lifecycle.
@@ -43,20 +63,23 @@ public class DashboardViewModel extends ViewModel {
         public void onServiceConnected(ComponentName componentName, IBinder service) {
             mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
             if (!mBluetoothLeService.initialize()) {
-                //TODO
+                Log.e(TAG, "Unable to initialize Bluetooth");
+                return;
             }
             // Automatically connects to the device upon successful start-up initialization.
-            mBluetoothLeService.connect(mDevice.getValue().getAddress());
+            mBluetoothLeService.connect(mDeviceAddress.getValue());
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
+            Log.i(TAG, "**** BLE Service disconnected");
             mBluetoothLeService = null;
         }
     };
 
-    public void connect(Context context, BluetoothDevice device) {
-        mDevice.setValue(device);
+    public void connect(Context context, String deviceAddress, String deviceName) {
+        mDeviceAddress.setValue(deviceAddress);
+        mDeviceName.setValue(deviceName);
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
 
         Intent gattServiceIntent = new Intent(context, BluetoothLeService.class);
@@ -89,12 +112,49 @@ public class DashboardViewModel extends ViewModel {
                 mConnectionState.setValue("DISCONNECTED");
                 mConnected.setValue(false);
             } else if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-                // Show all the supported services and characteristics on the UI
-                //TODO displayGattServices(bluetoothLeService.getSupportedGattServices());
+                checkGattServices(mBluetoothLeService.getSupportedGattServices());
             } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-                //TODO displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
+                displayData(intent.getStringExtra(BluetoothLeService.EXTRA_DATA));
             }
         }
     };
+
+    private void checkGattServices(List<BluetoothGattService> gattServices) {
+        if (gattServices == null)
+            return;
+
+        for (BluetoothGattService gattService : gattServices) {
+            List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
+            for (BluetoothGattCharacteristic characteristic : gattCharacteristics) {
+                UUID uuid = characteristic.getUuid();
+                Log.d(TAG, String.format("**** Char [%s]", uuid));
+                if(!uuid.equals(UUID_CURRENT_TIME_CHAR))
+                    continue;
+
+                final int charaProp = characteristic.getProperties();
+                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
+                    // If there is an active notification on a characteristic, clear
+                    // it first so it doesn't update the data field on the user interface.
+                    if (mNotifyCharacteristic != null) {
+                        mBluetoothLeService.setCharacteristicNotification(
+                                mNotifyCharacteristic, false);
+                        mNotifyCharacteristic = null;
+                    }
+                    mBluetoothLeService.readCharacteristic(characteristic);
+                }
+                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
+                    mNotifyCharacteristic = characteristic;
+                    mBluetoothLeService.setCharacteristicNotification(
+                            characteristic, true);
+                }
+                return;
+            }
+        }
+    }
+
+    private void displayData(String data) {
+        mData.getValue().add(data);
+        mData.setValue(mData.getValue());
+    }
 
 }

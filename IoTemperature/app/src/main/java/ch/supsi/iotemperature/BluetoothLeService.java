@@ -1,5 +1,3 @@
-package ch.supsi.iotemperature;
-
 /*
  * Copyright (C) 2013 The Android Open Source Project
  *
@@ -16,6 +14,8 @@ package ch.supsi.iotemperature;
  * limitations under the License.
  */
 
+package ch.supsi.iotemperature;
+
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -29,9 +29,11 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,18 +55,19 @@ public class BluetoothLeService extends Service {
     private static final int STATE_CONNECTED = 2;
 
     public final static String ACTION_GATT_CONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_CONNECTED";
+            "ch.supsi.iotemperature.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
-            "com.example.bluetooth.le.ACTION_GATT_DISCONNECTED";
+            "ch.supsi.iotemperature.ACTION_GATT_DISCONNECTED";
     public final static String ACTION_GATT_SERVICES_DISCOVERED =
-            "com.example.bluetooth.le.ACTION_GATT_SERVICES_DISCOVERED";
+            "ch.supsi.iotemperature.ACTION_GATT_SERVICES_DISCOVERED";
     public final static String ACTION_DATA_AVAILABLE =
-            "com.example.bluetooth.le.ACTION_DATA_AVAILABLE";
+            "ch.supsi.iotemperature.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
-            "com.example.bluetooth.le.EXTRA_DATA";
+            "ch.supsi.iotemperature.EXTRA_DATA";
 
-    public final static UUID UUID_HEART_RATE_MEASUREMENT =
-            UUID.fromString(SUPSIGattAttributes.HEART_RATE_MEASUREMENT);
+    // TODO SUPSI: Choose the proper characteristic
+    public final static UUID UUID_CURRENT_TIME_CHAR =
+            UUID.fromString(SUPSIGattAttributes.CURRENT_TIME_CHAR);
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
@@ -76,15 +79,15 @@ public class BluetoothLeService extends Service {
                 intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
                 broadcastUpdate(intentAction);
-                Log.i(TAG, "Connected to GATT server.");
+                Log.i(TAG, "**** Connected to GATT server.");
                 // Attempts to discover services after successful connection.
-                Log.i(TAG, "Attempting to start service discovery:" +
+                Log.i(TAG, "**** Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
 
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
-                Log.i(TAG, "Disconnected from GATT server.");
+                Log.i(TAG, "**** Disconnected from GATT server.");
                 broadcastUpdate(intentAction);
             }
         }
@@ -121,24 +124,28 @@ public class BluetoothLeService extends Service {
 
     private void broadcastUpdate(final String action,
                                  final BluetoothGattCharacteristic characteristic) {
+        // Create an Intent based on action and broadcast to listener
+        // pass the data through putExtra with key EXTRA_DATA
         final Intent intent = new Intent(action);
 
-        // This is special handling for the Heart Rate Measurement profile.  Data parsing is
-        // carried out as per profile specifications:
-        // http://developer.bluetooth.org/gatt/characteristics/Pages/CharacteristicViewer.aspx?u=org.bluetooth.characteristic.heart_rate_measurement.xml
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
-            int flag = characteristic.getProperties();
-            int format = -1;
-            if ((flag & 0x01) != 0) {
-                format = BluetoothGattCharacteristic.FORMAT_UINT16;
-                Log.d(TAG, "Heart rate format UINT16.");
-            } else {
-                format = BluetoothGattCharacteristic.FORMAT_UINT8;
-                Log.d(TAG, "Heart rate format UINT8.");
-            }
-            final int heartRate = characteristic.getIntValue(format, 1);
-            Log.d(TAG, String.format("Received heart rate: %d", heartRate));
-            intent.putExtra(EXTRA_DATA, String.valueOf(heartRate));
+        int flag = characteristic.getProperties();
+        int format = ((flag & 0x01) != 0) ?
+                BluetoothGattCharacteristic.FORMAT_UINT16 :
+                BluetoothGattCharacteristic.FORMAT_UINT8;
+        int shift = format == BluetoothGattCharacteristic.FORMAT_UINT8 ? 8 : 16;
+        Log.d(TAG, String.format("**** shift %d bit", shift));
+
+        // TODO SUPSI: Choose the proper characteristic
+        if(UUID_CURRENT_TIME_CHAR.equals(characteristic.getUuid())) {
+            final byte[] data = characteristic.getValue();
+            int yearLow = characteristic.getIntValue(format, 0);
+            int yearHi = characteristic.getIntValue(format, 1);
+            int year = (yearHi << shift) + yearLow;
+
+            String extra = LocalDateTime.of(year, data[2], data[3], data[4], data[5], data[6]).toString();
+            Log.d(TAG, String.format("*** CURRENT TIME CHAR [%s] Action [%s] Extra [%s]",
+                    characteristic.getUuid(), action, extra));
+            intent.putExtra(EXTRA_DATA, extra);
         } else {
             // For all other profiles, writes the data formatted in HEX.
             final byte[] data = characteristic.getValue();
@@ -146,7 +153,11 @@ public class BluetoothLeService extends Service {
                 final StringBuilder stringBuilder = new StringBuilder(data.length);
                 for(byte byteChar : data)
                     stringBuilder.append(String.format("%02X ", byteChar));
-                intent.putExtra(EXTRA_DATA, new String(data) + "\n" + stringBuilder.toString());
+
+                String extra =  new String(data) + "\n" + stringBuilder.toString();
+                Log.d(TAG, String.format("*** Characteristic [%s] Action [%s] Extra [%s]",
+                        characteristic.getUuid(), action, extra));
+                intent.putExtra(EXTRA_DATA, extra);
             }
         }
         sendBroadcast(intent);
@@ -216,7 +227,7 @@ public class BluetoothLeService extends Service {
         }
 
         // Previously connected device.  Try to reconnect.
-        if (mBluetoothDeviceAddress != null && address.equals(mBluetoothDeviceAddress)
+        if (address.equals(mBluetoothDeviceAddress)
                 && mBluetoothGatt != null) {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             if (mBluetoothGatt.connect()) {
@@ -296,8 +307,8 @@ public class BluetoothLeService extends Service {
         }
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
 
-        // This is specific to Heart Rate Measurement.
-        if (UUID_HEART_RATE_MEASUREMENT.equals(characteristic.getUuid())) {
+        // TODO SUPSI: Choose the proper characteristic
+        if (UUID_CURRENT_TIME_CHAR.equals(characteristic.getUuid())) {
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID.fromString(SUPSIGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);

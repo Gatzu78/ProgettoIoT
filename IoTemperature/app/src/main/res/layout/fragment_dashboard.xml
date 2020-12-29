@@ -70,13 +70,19 @@
         app:layout_constraintVertical_bias="0.078"
         tools:text="device_name" />
 
-    <ExpandableListView android:id="@+id/gatt_services_list"
-        android:layout_width="0dp"
+    <ListView
+        android:id="@+id/listViewBLEData"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="10dp"
+        android:layout_marginTop="50dp"
+        android:footerDividersEnabled="true"
+        android:headerDividersEnabled="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/data_value" />
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="@id/data_value"
+        app:layout_constraintTop_toTopOf="@id/data_value">
+
+    </ListView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
