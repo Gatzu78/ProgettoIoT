@@ -14,6 +14,8 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
+
+import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
 
@@ -28,9 +30,11 @@ public class HomeFragment extends Fragment {
 
         View root = inflater.inflate(R.layout.fragment_home, container, false);
 
+        // TITLE
         final TextView textView = root.findViewById(R.id.text_home);
         homeViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
 
+        // DEVICE LIST
         final ListView deviceListView = root.findViewById(R.id.listViewPairedDevice);
         homeViewModel.getIoTDevices().observe(getViewLifecycleOwner(), devices -> {
             if(devices != null) {
@@ -40,8 +44,12 @@ public class HomeFragment extends Fragment {
             deviceListAdapter.notifyDataSetChanged();
         });
 
+        // DEVICE SELECTED
         deviceListView.setOnItemClickListener((parent, view, position, id) -> {
             BluetoothDevice device = (BluetoothDevice)deviceListView.getItemAtPosition(position);
+
+            MainActivity main = (MainActivity) getActivity();
+            main.connect(device.getAddress());
 
             NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment);
             Bundle bundle = new Bundle();
@@ -50,6 +58,7 @@ public class HomeFragment extends Fragment {
             navController.navigate(R.id.navigation_dashboard, bundle);
         });
 
+        // SCAN BUTTON
         final Button scanButton = root.findViewById(R.id.btnScan);
         homeViewModel.getIsScanning()
                 .observe(getViewLifecycleOwner(), isScanning -> {
