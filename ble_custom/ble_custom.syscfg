@@ -29,11 +29,16 @@ const GPIO4       = GPIO.addInstance();
 const NVS         = scripting.addModule("/ti/drivers/NVS");
 const NVS1        = NVS.addInstance();
 const NVS2        = NVS.addInstance();
+const PWM         = scripting.addModule("/ti/drivers/PWM", {}, false);
+const PWM1        = PWM.addInstance();
 const Power       = scripting.addModule("/ti/drivers/Power");
 const RF          = scripting.addModule("/ti/drivers/RF");
 const RTOS        = scripting.addModule("/ti/drivers/RTOS");
 const TRNG        = scripting.addModule("/ti/drivers/TRNG");
 const TRNG1       = TRNG.addInstance();
+const Timer       = scripting.addModule("/ti/drivers/Timer", {}, false);
+const Timer1      = Timer.addInstance();
+const Timer2      = Timer.addInstance();
 
 /**
  * Write custom configuration values to the imported modules.
@@ -46,7 +51,7 @@ ble.maxPDUSize                                      = 251;
 ble.maxConnNum                                      = 2;
 ble.numOfAdvSets                                    = 1;
 ble.numOfDefAdvSets                                 = 1;
-ble.deviceName                                      = "IoT Custom";
+ble.deviceName                                      = "SUPSI IoT";
 ble.radioConfig.codeExportConfig.$name              = "ti_devices_radioconfig_code_export_param0";
 ble.connUpdateParamsPeripheral.$name                = "ti_ble5stack_general_ble_conn_update_params0";
 ble.connUpdateParamsPeripheral.upConnTo             = 2000;
@@ -59,12 +64,13 @@ ble.advSet1.advData1.$name                          = "ti_ble5stack_broadcaster_
 ble.advSet1.advData1.GAP_ADTYPE_FLAGS               = true;
 ble.advSet1.advData1.advertisingFlags               = ["GAP_ADTYPE_FLAGS_BREDR_NOT_SUPPORTED","GAP_ADTYPE_FLAGS_GENERAL"];
 ble.advSet1.advData1.GAP_ADTYPE_LOCAL_NAME_COMPLETE = true;
-ble.advSet1.advData1.completeLocalName              = "IoT Custom";
+ble.advSet1.advData1.completeLocalName              = "SUPSI IoT";
 ble.advSet1.scanRes1.$name                          = "ti_ble5stack_broadcaster_advertisement_data1";
 ble.advSet1.scanRes1.GAP_ADTYPE_128BIT_MORE         = true;
 ble.advSet1.scanRes1.numOfUUIDs128More              = 1;
 ble.advSet1.scanRes1.UUID0128More                   = system.utils.bigInt("B000405104101100F0",16);
-ble.advSet1.scanRes1.completeLocalName              = "IoT Custom";
+ble.advSet1.scanRes1.GAP_ADTYPE_LOCAL_NAME_COMPLETE = true;
+ble.advSet1.scanRes1.completeLocalName              = "SUPSI IoT";
 
 CCFG.enableCodeGeneration = false;
 
@@ -116,7 +122,18 @@ NVS2.$name                          = "CONFIG_NVSEXTERNAL";
 NVS2.externalFlash.$name            = "ti_drivers_nvs_NVSSPI25X0";
 NVS2.externalFlash.verifyBufferSize = 64;
 
+PWM1.$name                            = "CONFIG_PWM0";
+PWM1.timerObject.$name                = "CONFIG_GPTIMER_2";
+PWM1.timerObject.$hardware            = null;
+PWM1.timerObject.pwmPinInstance.$name = "CONFIG_PIN_4";
+
 TRNG1.$name = "CONFIG_TRNG_0";
+
+Timer1.$name               = "CONFIG_TIMER0";
+Timer1.timerInstance.$name = "CONFIG_GPTIMER_0";
+
+Timer2.$name               = "CONFIG_TIMER1";
+Timer2.timerInstance.$name = "CONFIG_GPTIMER_1";
 
 const NVSSPI25XDevice                                      = scripting.addModule("/ti/drivers/nvs/NVSSPI25XDevice", {}, false);
 const NVSSPI25XDevice1                                     = NVSSPI25XDevice.addInstance({}, false);
@@ -145,6 +162,10 @@ GPIO1.gpioPin.$suggestSolution                                    = "boosterpack
 GPIO2.gpioPin.$suggestSolution                                    = "boosterpack.12";
 GPIO3.gpioPin.$suggestSolution                                    = "boosterpack.39";
 GPIO4.gpioPin.$suggestSolution                                    = "boosterpack.40";
+PWM1.timerObject.timer.$suggestSolution                           = "GPTM1";
+PWM1.timerObject.timer.pwmPin.$suggestSolution                    = "boosterpack.29";
+Timer1.timerInstance.timer.$suggestSolution                       = "GPTM0";
+Timer2.timerInstance.timer.$suggestSolution                       = "GPTM0";
 NVSSPI25XDevice1.slaveSelectGpioInstance.gpioPin.$suggestSolution = "boosterpack.38";
 SPI1.spi.$suggestSolution                                         = "SSI0";
 SPI1.spi.sclkPin.$suggestSolution                                 = "boosterpack.7";
