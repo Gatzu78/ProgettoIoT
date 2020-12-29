@@ -179,7 +179,8 @@ int main()
     TimerCfg();
     PWMCfg();
 
-    //PIN_setOutputValue(ledPinHandle, CONFIG_PIN_GLED, pCharData->data[0]); //funzione esempio per settare led0
+
+    //PIN_setOutputValue(ledPinHandle, CONFIG_PIN_RLED, pCharData->data[0]); //funzione esempio per settare led0
 
     /** @brief Control output value for GPIO pin
      *
@@ -297,8 +298,8 @@ void TimerCfg(){
     Timer_Params    params;
 
     Timer_Params_init(&params);
-    params.periodUnits = Timer_PERIOD_HZ;
-    params.period = 1;
+    params.periodUnits = Timer_PERIOD_US;
+    params.period = 2000000;                //callback ogni 2 secondi di default
     params.timerMode  = Timer_CONTINUOUS_CALLBACK;
     params.timerCallback = TempSimulator;
     handle[0] = Timer_open(CONFIG_TIMER0, &params);

@@ -42,6 +42,14 @@ extern "C"
     0xB0, 0x00, 0x40, 0x51, 0x04, LO_UINT16(uuid), HI_UINT16(uuid), 0x00, 0xF0
 #define TS_TEMP_LEN                4
 #define TS_TEMP_LEN_MIN            1
+
+// Sample Characteristic defines
+#define TS_SAMPLE_ID                 1
+#define TS_SAMPLE_UUID               0x1142
+#define TS_SAMPLE_UUID_BASE128(uuid) 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
+    0xB0, 0x00, 0x40, 0x51, 0x04, LO_UINT16(uuid), HI_UINT16(uuid), 0x00, 0xF0
+#define TS_SAMPLE_LEN                1
+#define TS_SAMPLE_LEN_MIN            1
 /*********************************************************************
  * TYPEDEFS
  */

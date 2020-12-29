@@ -54,6 +54,11 @@ CONST uint8_t ts_TempUUID[ATT_UUID_SIZE] =
     TS_TEMP_UUID_BASE128(TS_TEMP_UUID)
 };
 
+// Sample UUID
+CONST uint8_t ts_SampleUUID[ATT_UUID_SIZE] =
+{
+    TS_SAMPLE_UUID_BASE128(TS_TEMP_UUID)
+};
 /*********************************************************************
  * LOCAL VARIABLES
  */
@@ -68,8 +73,7 @@ static TempServiceCBs_t *pAppCBs = NULL;
 static CONST gattAttrType_t TempServiceDecl = { ATT_UUID_SIZE, TempServiceUUID };
 
 // Characteristic "Temp" Properties (for declaration)
-static uint8_t ts_TempProps = GATT_PROP_READ | GATT_PROP_WRITE |
-                              GATT_PROP_WRITE_NO_RSP;
+static uint8_t ts_TempProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
 
 // Characteristic "Temp" Value variable
 static uint8_t ts_TempVal[TS_TEMP_LEN] = {0};
@@ -77,7 +81,15 @@ static uint8_t ts_TempVal[TS_TEMP_LEN] = {0};
 // Length of data in characteristic "Temp" Value variable, initialized to minimal size.
 static uint16_t ts_TempValLen = TS_TEMP_LEN_MIN;
 
+// Characteristic "Sample" Properties (for declaration)
+static uint8_t ts_SampleProps = GATT_PROP_READ | GATT_PROP_WRITE |
+                              GATT_PROP_WRITE_NO_RSP;
 
+// Characteristic "Sample" Value variable
+static uint8_t ts_SampleVal[TS_SAMPLE_LEN] = {2};
+
+// Length of data in characteristic "Sample" Value variable, initialized to minimal size.
+static uint16_t ts_SampleValLen = TS_SAMPLE_LEN_MIN;
 /*********************************************************************
  * Profile Attributes - Table
  */
@@ -104,6 +116,20 @@ static gattAttribute_t Temp_ServiceAttrTbl[] =
         GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
         0,
         ts_TempVal
+    },
+    // Sample Characteristic Declaration
+    {
+        { ATT_BT_UUID_SIZE, characterUUID },
+        GATT_PERMIT_READ,
+        0,
+        &ts_SampleProps
+    },
+    // Sample Characteristic Value
+    {
+        { ATT_UUID_SIZE, ts_SampleUUID },
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
+        0,
+        ts_SampleVal
     },
 };
 
@@ -210,6 +236,14 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Temp", len);
         break;
 
+    case TS_SAMPLE_ID:
+        pAttrVal = ts_SampleVal;
+        pValLen = &ts_SampleValLen;
+        valMinLen = TS_SAMPLE_LEN_MIN;
+        valMaxLen = TS_SAMPLE_LEN;
+        Log_info2("SetParameter : %s len: %d", (uintptr_t)"Sample", len);
+        break;
+
     default:
         Log_error1("SetParameter: Parameter #%d not valid.", param);
         return(INVALIDPARAMETER);
@@ -233,7 +267,7 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
 }
 
 /*
- * TempService_GetParameter - Get a LedService parameter.
+ * TempService_GetParameter - Get a TempService parameter.
  *
  *    param - Profile parameter ID
  *    len   - pointer to a variable that contains the maximum length that can be written to *value.
@@ -252,6 +286,13 @@ bStatus_t TempService_GetParameter(uint8_t param, uint16_t *len, void *value)
         *len = MIN(*len, ts_TempValLen);
         memcpy(value, ts_TempVal, *len);
         Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"Temp",
+                  *len);
+        break;
+
+    case TS_SAMPLE_ID:
+        *len = MIN(*len, ts_SampleValLen);
+        memcpy(value, ts_SampleVal, *len);
+        Log_info2("GetParameter : %s returning %d bytes", (uintptr_t)"Sample",
                   *len);
         break;
 
@@ -274,7 +315,7 @@ bStatus_t TempService_GetParameter(uint8_t param, uint16_t *len, void *value)
  *
  * @param       pAttr - pointer to attribute
  *
- * @return      uint8_t paramID (ref led_service.h) or 0xFF if not found.
+ * @return      uint8_t paramID (ref temp_service.h) or 0xFF if not found.
  */
 static uint8_t Temp_Service_findCharParamId(gattAttribute_t *pAttr)
 {
@@ -289,6 +330,12 @@ static uint8_t Temp_Service_findCharParamId(gattAttribute_t *pAttr)
             !memcmp(pAttr->type.uuid, ts_TempUUID, pAttr->type.len))
     {
         return(TS_TEMP_ID);
+    }
+    // Is this attribute in "Sample"?
+    else if(ATT_UUID_SIZE == pAttr->type.len &&
+            !memcmp(pAttr->type.uuid, ts_SampleUUID, pAttr->type.len))
+    {
+        return(TS_SAMPLE_ID);
     }
     else
     {
@@ -335,6 +382,17 @@ static bStatus_t Temp_Service_ReadAttrCB(uint16_t connHandle,
                   offset,
                   method);
         /* Other considerations for Temp can be inserted here */
+        break;
+
+    case TS_SAMPLE_ID:
+        valueLen = ts_SampleValLen;
+
+        Log_info4("ReadAttrCB : %s connHandle: %d offset: %d method: 0x%02x",
+                  (uintptr_t)"Sample",
+                  connHandle,
+                  offset,
+                  method);
+        /* Other considerations for Sample can be inserted here */
         break;
 
     default:
@@ -400,6 +458,21 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
             offset,
             method);
         /* Other considerations for Temp can be inserted here */
+        break;
+
+    case TS_SAMPLE_ID:
+        writeLenMin = TS_SAMPLE_LEN_MIN;
+        writeLenMax = TS_SAMPLE_LEN;
+        pValueLenVar = &ts_SampleValLen;
+
+        Log_info5(
+            "WriteAttrCB : %s connHandle(%d) len(%d) offset(%d) method(0x%02x)",
+            (uintptr_t)"Sample",
+            connHandle,
+            len,
+            offset,
+            method);
+        /* Other considerations for Sample can be inserted here */
         break;
 
     default:

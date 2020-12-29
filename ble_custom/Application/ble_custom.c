@@ -82,7 +82,7 @@
 
 /* Application specific includes */
 #include <ti_drivers_config.h>
-
+#include <ti/drivers/Timer.h>
 #include <project_zero.h>
 #include "ti_ble_config.h"
 #include <util.h>
@@ -237,6 +237,7 @@ typedef struct
 /*********************************************************************
  * GLOBAL VARIABLES
  */
+extern Timer_Handle    handle[2];
 // Task configuration
 Task_Struct pzTask;
 #if defined __TI_COMPILER_VERSION__
@@ -358,6 +359,9 @@ static void ProjectZero_DataService_CfgChangeHandler(
     pzCharacteristicData_t *pCharData);
 static void ProjectZero_TempService_CfgChangeHandler(
     pzCharacteristicData_t *pCharData);
+static void ProjectZero_TempService_ValueChangeHandler(
+    pzCharacteristicData_t *pCharData);
+
 
 /* Stack or profile callback function */
 static void ProjectZero_advCallback(uint32_t event,
@@ -631,7 +635,7 @@ static void ProjectZero_init(void)
 
     // Initalization of characteristics in Temp_Service that can provide data.
     TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, initVal);
-
+    TempService_SetParameter(TS_SAMPLE_ID, TS_SAMPLE_LEN, initVal);
     // Start Bond Manager and register callback
     VOID GAPBondMgr_Register(&ProjectZero_BondMgrCBs);
 
@@ -843,6 +847,9 @@ static void ProjectZero_processApplicationMessage(pzMsg_t *pMsg)
                 break;
             case DATA_SERVICE_SERV_UUID:
                 ProjectZero_DataService_ValueChangeHandler(pCharData);
+                break;
+            case TEMP_SERVICE_SERV_UUID:
+                ProjectZero_TempService_ValueChangeHandler(pCharData);
                 break;
           }
           break;
@@ -2016,6 +2023,58 @@ void ProjectZero_TempService_CfgChangeHandler(
         // ...
         break;
 
+    case TS_SAMPLE_ID:
+        Log_info3("CCCD Change msg: %s : %s",
+                  (uintptr_t)"Temp Service",
+                  (uintptr_t)"Sample",
+                  (uintptr_t)configValString);
+        // -------------------------
+        // Do something useful with configValue here. It tells you whether someone
+        // wants to know the state of this characteristic.
+        // ...
+        break;
+    }
+}
+
+/*
+ * @brief   Handle a write request sent from a peer device.
+ *
+ *          Invoked by the Task based on a message received from a callback.
+ *
+ *          When we get here, the request has already been accepted by the
+ *          service and is valid from a BLE protocol perspective as well as
+ *          having the correct length as defined in the service implementation.
+ *
+ * @param   pCharData  pointer to malloc'd char write data
+ *
+ * @return  None.
+ */
+void ProjectZero_TempService_ValueChangeHandler(
+    pzCharacteristicData_t *pCharData)
+{
+    static uint8_t pretty_data_holder[16]; // 5 bytes as hex string "AA:BB:CC:DD:EE"
+    util_arrtohex(pCharData->data, pCharData->dataLen,
+                  pretty_data_holder, sizeof(pretty_data_holder),
+                  UTIL_ARRTOHEX_NO_REVERSE);
+
+    switch(pCharData->paramID)
+    {
+    case TS_SAMPLE_ID:
+        Log_info3("Value Change msg: %s %s: %s",
+                  (uintptr_t)"Temp Service",
+                  (uintptr_t)"Sample",
+                  (uintptr_t)pretty_data_holder);
+
+        // Do something useful with pCharData->data here
+        // -------------------------
+        // Set the timer 0 interval based on the input value
+
+        Timer_setPeriod(handle[0], Timer_PERIOD_US, 1000000*pCharData->data[0]);
+        break;
+
+
+    default:
+        return;
     }
 }
 
