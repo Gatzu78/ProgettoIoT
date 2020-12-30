@@ -1,6 +1,8 @@
 package ch.supsi.iotemperature.ui.dashboard;
 
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -32,7 +34,9 @@ public class DashboardFragment extends Fragment {
                              ViewGroup container, Bundle savedInstanceState) {
         Log.i(TAG, "**** onCreateView");
 
+        MainActivity mainActivity = (MainActivity) getActivity();
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
+        dashboardViewModel.registerReceiver(getContext());
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
 
         // DEVICE NAME
@@ -51,16 +55,13 @@ public class DashboardFragment extends Fragment {
         final Button btnRefreshData = root.findViewById(R.id.btnRefreshData);
         btnRefreshData.setOnClickListener(view -> {
             MainActivity main = (MainActivity) getActivity();
-            main.asyncReadTime();
             main.asyncReadTemperature();
-            main.asyncReadSampling();
         });
 
         // LED BUTTON
         final Button btnLED = root.findViewById(R.id.btnLED);
         btnLED.setOnClickListener(view -> {
-            MainActivity main = (MainActivity) getActivity();
-            main.toggleLED1();
+            mainActivity.toggleLED1();
         });
 
         dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), isOn -> {
@@ -70,10 +71,26 @@ public class DashboardFragment extends Fragment {
         // SAMPLING
         final Button btnSampling = root.findViewById(R.id.btnSampling);
         btnSampling.setOnClickListener(view -> {
-            MainActivity main = (MainActivity) getActivity();
-            main.writeSampling(dashboardViewModel.getSamplingValue().getValue());
+            mainActivity.writeSampling(dashboardViewModel.getSamplingValue().getValue());
         });
+
         final EditText numSampling = root.findViewById(R.id.numSampling);
+        numSampling.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                dashboardViewModel.setSampling(Integer.parseInt(s.toString()));
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
+
         dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
             numSampling.setText(String.valueOf(value));
         });
@@ -103,7 +120,6 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         Log.i(TAG, "**** onActivityCreated");
-
         super.onActivityCreated(savedInstanceState);
 
         Bundle bundle = this.getArguments();
@@ -113,7 +129,8 @@ public class DashboardFragment extends Fragment {
             mDeviceName = bundle.getString(SUPSIGattAttributes.KEY_DEVICE_NAME);
         }
 
-        dashboardViewModel.connect(getContext(), mDeviceAddress, mDeviceName);
+        dashboardViewModel.setDeviceAddress(mDeviceAddress);
+        dashboardViewModel.setDeviceName(mDeviceName);
     }
 
     @Override
@@ -133,8 +150,6 @@ public class DashboardFragment extends Fragment {
             mDeviceName = savedInstanceState.getString(SUPSIGattAttributes.KEY_DEVICE_NAME);
         }
     }
-
-
 
     @Override
     public void onDestroyView() {

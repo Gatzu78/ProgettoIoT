@@ -57,7 +57,7 @@ CONST uint8_t ts_TempUUID[ATT_UUID_SIZE] =
 // Sample UUID
 CONST uint8_t ts_SampleUUID[ATT_UUID_SIZE] =
 {
-    TS_SAMPLE_UUID_BASE128(TS_TEMP_UUID)
+    TS_SAMPLE_UUID_BASE128(TS_SAMPLE_UUID)
 };
 /*********************************************************************
  * LOCAL VARIABLES

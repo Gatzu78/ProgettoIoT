@@ -27,10 +27,6 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.util.List;
 import java.util.UUID;
 
-import ch.supsi.iotemperature.ui.dashboard.DashboardViewModel;
-
-import static ch.supsi.iotemperature.BluetoothLeService.UUID_CURRENT_TIME_CHAR;
-
 public class MainActivity extends AppCompatActivity {
     private final static String TAG = MainActivity.class.getSimpleName();
 
@@ -145,7 +141,7 @@ public class MainActivity extends AppCompatActivity {
                 boolean canRead = (charaProp & BluetoothGattCharacteristic.PROPERTY_READ) > 0;
                 boolean canWrite = (charaProp & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
                 boolean canNotify = (charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0;
-                Log.d(TAG, String.format("**** Characteristics R=%s\tW=%s\tN=%s\t[%s]",
+                Log.d(TAG, String.format("**** Characteristics\t R=%s W=%s N=%s \t[%s]",
                         canRead, canWrite, canNotify,
                         SUPSIGattAttributes.lookup(uuid.toString(), uuid.toString())));
             }
@@ -153,18 +149,22 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void connect(String deviceAddress) {
-        //registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
         mBluetoothLeService.connect(deviceAddress);
     }
 
+    //TODO REMOVE - MI BAND
     public void asyncReadTime() {
-        mBluetoothLeService.asyncReadTime();
+        mBluetoothLeService.asyncReadCurrentTime();
     }
+
     public void asyncReadTemperature() {
         mBluetoothLeService.asyncReadTemperature();
     }
     public void asyncReadSampling() {
         mBluetoothLeService.asyncReadSampling();
+    }
+    public void asyncReadLED1() {
+        mBluetoothLeService.asyncReadLED1();
     }
 
     public void toggleLED1() {

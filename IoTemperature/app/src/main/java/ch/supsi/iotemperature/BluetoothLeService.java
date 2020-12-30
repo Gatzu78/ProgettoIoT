@@ -138,14 +138,22 @@ public class BluetoothLeService extends Service {
                 svc = mBluetoothGatt.getService(UUID_LED_SERVICE);
                 if(svc != null) {
                     mLED1Characteristic = svc.getCharacteristic(UUID_LED1_CHARACTERISTIC);
-                    readCharacteristic(mLED1Characteristic);
+                    asyncReadLED1();
                 }
 
                 // TEMPERATURE SERVICE
                 svc = mBluetoothGatt.getService(UUID_TEMPERATURE_SERVICE);
                 if(svc != null) {
                     mTemperatureCharacteristic = svc.getCharacteristic(UUID_TEMPERATURE_CHARACTERISTIC);
+                    if(mTemperatureCharacteristic == null)
+                        Log.e(TAG, "**** TEMP CHAR not found");
+                    asyncReadTemperature();
+
                     mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
+                    if(mSamplingCharacteristic == null)
+                        Log.e(TAG, "**** SAMPLING CHAR not found");
+                    asyncReadSampling();
+
                     // ENABLE NOTIFICATION
                     setCharacteristicNotification(mTemperatureCharacteristic, true);
                 }
@@ -273,6 +281,10 @@ public class BluetoothLeService extends Service {
                 BluetoothGattCharacteristic.FORMAT_UINT8;
     }
 
+    public void asyncReadCurrentTime() {
+        readCharacteristic(mCurrentTimeChar);
+    }
+
     public void asyncReadSampling() {
         readCharacteristic(mSamplingCharacteristic);
     }
@@ -286,15 +298,16 @@ public class BluetoothLeService extends Service {
         readCharacteristic(mTemperatureCharacteristic);
     }
 
-    public void asyncReadTime() {
-        readCharacteristic(mCurrentTimeChar);
+    public void asyncReadLED1() {
+        readCharacteristic(mLED1Characteristic);
     }
 
     public void toggletLED1() {
         mLED1Value = mLED1Value ^ 1;
         mLED1Characteristic.setValue(mLED1Value, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
-        writeCharacteristic(mSamplingCharacteristic);
+        writeCharacteristic(mLED1Characteristic);
     }
+
 
     public class LocalBinder extends Binder {
         public BluetoothLeService getService() {

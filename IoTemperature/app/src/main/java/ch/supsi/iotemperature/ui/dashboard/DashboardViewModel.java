@@ -39,8 +39,9 @@ public class DashboardViewModel extends ViewModel {
         mConnected = new MutableLiveData<>(false);
         mDeviceAddress = new MutableLiveData<>("-");
         mDeviceName = new MutableLiveData<>("-");
-        mSamplingValue = new MutableLiveData<>(2);
+        mSamplingValue = new MutableLiveData<>(0);
         mTemperatures = new MutableLiveData<>(new ArrayList<>());
+
     }
 
     public LiveData<List<String>> getData() { return mData; }
@@ -60,12 +61,7 @@ public class DashboardViewModel extends ViewModel {
         return mDeviceAddress;
     }
 
-    public void connect(Context context, String deviceAddress, String deviceName) {
-        Log.i(TAG, "**** Connect");
-
-        mDeviceAddress.setValue(deviceAddress);
-        mDeviceName.setValue(deviceName);
-        mConnected.setValue(false);
+    public void registerReceiver(Context context) {
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 
@@ -136,5 +132,18 @@ public class DashboardViewModel extends ViewModel {
         while (values.size() > NUM_OF_TEMP_VALUES)
             values.remove(0);
         mTemperatures.setValue(values);
+    }
+
+    public void setSampling(int value) {
+        if(mSamplingValue.getValue() != value)
+            mSamplingValue.setValue(value);
+    }
+
+    public void setDeviceName(String deviceName) {
+        mDeviceName.setValue(deviceName);
+    }
+
+    public void setDeviceAddress(String deviceAddress) {
+        mDeviceAddress.setValue(deviceAddress);
     }
 }
