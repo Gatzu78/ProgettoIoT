@@ -15,6 +15,9 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+
 import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
@@ -38,7 +41,8 @@ public class HomeFragment extends Fragment {
         final ListView deviceListView = root.findViewById(R.id.listViewPairedDevice);
         homeViewModel.getIoTDevices().observe(getViewLifecycleOwner(), devices -> {
             if(devices != null) {
-                deviceListAdapter = new DeviceListAdapter(this.getContext(), devices);
+                deviceListAdapter = new DeviceListAdapter(this.getContext(),
+                        new ArrayList<>(devices));
                 deviceListView.setAdapter(deviceListAdapter);
             }
             deviceListAdapter.notifyDataSetChanged();
@@ -65,8 +69,9 @@ public class HomeFragment extends Fragment {
                     String text = isScanning ? "STOP" : "SCAN";
                     scanButton.setText(text);
                 });
-        scanButton.setOnClickListener(view -> homeViewModel.refreshDevices(view.getContext()));
+        scanButton.setOnClickListener(view -> homeViewModel.scanBleDevice());
 
+        homeViewModel.scanBleDevice();
         return root;
     }
 }

@@ -29,13 +29,14 @@ import android.bluetooth.BluetoothProfile;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Build;
 import android.os.IBinder;
 import android.util.Log;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
+
+import static android.bluetooth.BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT;
 
 /**
  * Service for managing connection and data communication with a GATT server hosted on a
@@ -49,6 +50,13 @@ public class BluetoothLeService extends Service {
     private String mBluetoothDeviceAddress;
     private BluetoothGatt mBluetoothGatt;
     private int mConnectionState = STATE_DISCONNECTED;
+    private int mLED1Value = 0;
+    private int mSamplingValue;
+
+    private BluetoothGattCharacteristic mTemperatureCharacteristic;
+    private BluetoothGattCharacteristic mLED1Characteristic;
+    private BluetoothGattCharacteristic mSamplingCharacteristic;
+    private BluetoothGattCharacteristic mCurrentTimeChar;
 
     private static final int STATE_DISCONNECTED = 0;
     private static final int STATE_CONNECTING = 1;
@@ -64,8 +72,11 @@ public class BluetoothLeService extends Service {
             "ch.supsi.iotemperature.ACTION_DATA_AVAILABLE";
     public final static String EXTRA_DATA =
             "ch.supsi.iotemperature.EXTRA_DATA";
+    public final static String EXTRA_CHARACTERISTIC =
+            "ch.supsi.iotemperature.EXTRA_CHARACTERISTIC";
 
     // TODO SUPSI: Choose the proper characteristic
+
     public final static UUID UUID_CURRENT_TIME_CHAR =
             UUID.fromString(SUPSIGattAttributes.CURRENT_TIME_CHAR);
 
@@ -80,10 +91,10 @@ public class BluetoothLeService extends Service {
                 mConnectionState = STATE_CONNECTED;
                 broadcastUpdate(intentAction);
                 Log.i(TAG, "**** Connected to GATT server.");
+
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "**** Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
-
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                 intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
@@ -95,6 +106,36 @@ public class BluetoothLeService extends Service {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                //TODO REMOVE
+                BluetoothGattService svc = mBluetoothGatt.getService(
+                        UUID.fromString(SUPSIGattAttributes.MI_BAND2_BASIC_SERVICE));
+                if(svc != null) {
+                    mCurrentTimeChar = svc.getCharacteristic(
+                            UUID.fromString(SUPSIGattAttributes.CURRENT_TIME_CHAR));
+                    mCurrentTimeChar.setWriteType(WRITE_TYPE_DEFAULT);
+                    setCharacteristicNotification(mCurrentTimeChar, true);
+                }
+
+                // LED
+                svc = mBluetoothGatt.getService(
+                        UUID.fromString(SUPSIGattAttributes.LED_SERVICE));
+                if(svc != null) {
+                    mLED1Characteristic = svc.getCharacteristic(
+                            UUID.fromString(SUPSIGattAttributes.LED1_CHARACTERISTIC));
+                    readCharacteristic(mLED1Characteristic);
+                }
+
+                // TEMPERATURE
+                svc = mBluetoothGatt.getService(
+                        UUID.fromString(SUPSIGattAttributes.TEMPERATURE_SERVICE));
+                if(svc != null) {
+                    mTemperatureCharacteristic = svc.getCharacteristic(
+                            UUID.fromString(SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC));
+                    mSamplingCharacteristic = svc.getCharacteristic(
+                            UUID.fromString(SUPSIGattAttributes.SAMPLING_CHARACTERISTIC));
+                    // ENABLE NOTIFICATION
+                    setCharacteristicNotification(mTemperatureCharacteristic, true);
+                }
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
@@ -127,40 +168,96 @@ public class BluetoothLeService extends Service {
         // Create an Intent based on action and broadcast to listener
         // pass the data through putExtra with key EXTRA_DATA
         final Intent intent = new Intent(action);
+        intent.putExtra(EXTRA_CHARACTERISTIC, characteristic.getUuid().toString());
 
-        int flag = characteristic.getProperties();
-        int format = ((flag & 0x01) != 0) ?
-                BluetoothGattCharacteristic.FORMAT_UINT16 :
-                BluetoothGattCharacteristic.FORMAT_UINT8;
+        int format = getCharacteristicFormat(characteristic);
         int shift = format == BluetoothGattCharacteristic.FORMAT_UINT8 ? 8 : 16;
-        Log.d(TAG, String.format("**** shift %d bit", shift));
+        Log.d(TAG, String.format("**** Characteristics %d bit format", shift));
 
         // TODO SUPSI: Choose the proper characteristic
-        if(UUID_CURRENT_TIME_CHAR.equals(characteristic.getUuid())) {
-            final byte[] data = characteristic.getValue();
-            int yearLow = characteristic.getIntValue(format, 0);
-            int yearHi = characteristic.getIntValue(format, 1);
-            int year = (yearHi << shift) + yearLow;
-
-            String extra = LocalDateTime.of(year, data[2], data[3], data[4], data[5], data[6]).toString();
-            Log.d(TAG, String.format("*** CURRENT TIME CHAR [%s] Action [%s] Extra [%s]",
-                    characteristic.getUuid(), action, extra));
-            intent.putExtra(EXTRA_DATA, extra);
-        } else {
-            // For all other profiles, writes the data formatted in HEX.
-            final byte[] data = characteristic.getValue();
-            if (data != null && data.length > 0) {
-                final StringBuilder stringBuilder = new StringBuilder(data.length);
-                for(byte byteChar : data)
-                    stringBuilder.append(String.format("%02X ", byteChar));
-
-                String extra =  new String(data) + "\n" + stringBuilder.toString();
-                Log.d(TAG, String.format("*** Characteristic [%s] Action [%s] Extra [%s]",
-                        characteristic.getUuid(), action, extra));
-                intent.putExtra(EXTRA_DATA, extra);
-            }
+        switch (characteristic.getUuid().toString()) {
+            case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
+                parseSamplingCharacteristic(action, characteristic, intent, format, shift);
+                break;
+            case SUPSIGattAttributes.CURRENT_TIME_CHAR:
+                parseCurrentTimeCharacteristic(action, characteristic, intent, format, shift);
+                break;
+            case SUPSIGattAttributes.LED1_CHARACTERISTIC:
+                parseLED1Characteristic(action, characteristic, intent, format, shift);
+            default:
+                parseUnknownCharacteristic(action, characteristic, intent);
+                break;
         }
         sendBroadcast(intent);
+    }
+
+    private void parseSamplingCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
+        mSamplingValue = characteristic.getIntValue(format, 0);
+        Log.d(TAG, String.format("*** CURRENT SAMPLING [%s] Action [%s] Extra [%d]",
+                characteristic.getUuid(), action, mLED1Value));
+        intent.putExtra(EXTRA_DATA, mLED1Value);
+    }
+
+    private void parseLED1Characteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
+        mLED1Value = characteristic.getIntValue(format, 0);
+        Log.d(TAG, String.format("*** CURRENT LED1 [%s] Action [%s] Extra [%d]",
+                characteristic.getUuid(), action, mLED1Value));
+        intent.putExtra(EXTRA_DATA, mLED1Value);
+    }
+
+    private void parseCurrentTimeCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
+        final byte[] data = characteristic.getValue();
+        int yearLow = characteristic.getIntValue(format, 0);
+        int yearHi = characteristic.getIntValue(format, 1);
+        int year = (yearHi << shift) + yearLow;
+
+        LocalDateTime extra = LocalDateTime.of(year, data[2], data[3], data[4], data[5], data[6]);
+        Log.d(TAG, String.format("*** CURRENT TIME CHAR [%s] Action [%s] Extra [%s]",
+                characteristic.getUuid(), action, extra));
+        intent.putExtra(EXTRA_DATA, extra);
+    }
+
+    private void parseUnknownCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent) {
+        // For all other profiles, writes the data formatted in HEX.
+        final byte[] data = characteristic.getValue();
+        if (data != null && data.length > 0) {
+            final StringBuilder stringBuilder = new StringBuilder(data.length);
+            for(byte byteChar : data)
+                stringBuilder.append(String.format("%02X ", byteChar));
+
+            String extra =  new String(data) + "\n" + stringBuilder.toString();
+            Log.d(TAG, String.format("*** Characteristic [%s] Action [%s] Extra [%s]",
+                    characteristic.getUuid(), action, extra));
+            intent.putExtra(EXTRA_DATA, extra);
+        }
+    }
+
+    private int getCharacteristicFormat(BluetoothGattCharacteristic characteristic) {
+        int flag = characteristic.getProperties();
+        return ((flag & 0x01) != 0) ?
+                BluetoothGattCharacteristic.FORMAT_UINT16 :
+                BluetoothGattCharacteristic.FORMAT_UINT8;
+    }
+
+    public void asyncReadSampling() {
+        readCharacteristic(mSamplingCharacteristic);
+    }
+
+    public void writeSampling(int value) {
+        mSamplingCharacteristic.setValue(value, BluetoothGattCharacteristic.FORMAT_UINT8, 0 );
+    }
+
+    public void asyncReadTemperature() {
+        readCharacteristic(mTemperatureCharacteristic);
+    }
+
+    public void asyncReadTime() {
+        readCharacteristic(mCurrentTimeChar);
+    }
+
+    public void toggletLED1() {
+        int status = mLED1Value ^ 1;
+        mLED1Characteristic.setValue(status, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
     }
 
     public class LocalBinder extends Binder {
@@ -291,6 +388,22 @@ public class BluetoothLeService extends Service {
             return;
         }
         mBluetoothGatt.readCharacteristic(characteristic);
+    }
+
+    public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return;
+        }
+        mBluetoothGatt.writeCharacteristic(characteristic);
+    }
+
+    public BluetoothGattService getService(UUID uuid) {
+        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
+            Log.w(TAG, "BluetoothAdapter not initialized");
+            return null;
+        }
+        return mBluetoothGatt.getService(uuid);
     }
 
     /**

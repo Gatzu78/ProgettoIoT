@@ -20,7 +20,9 @@ import androidx.lifecycle.ViewModel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import ch.supsi.iotemperature.BluetoothLeService;
 
@@ -32,7 +34,7 @@ public class HomeViewModel extends ViewModel {
 
     private final MutableLiveData<Boolean> mScanning;
     private final MutableLiveData<String> mText;
-    private final MutableLiveData<List<BluetoothDevice>> mIotDevices;
+    private final MutableLiveData<Set<BluetoothDevice>> mIotDevices;
 
     private Handler handler = new Handler();
 
@@ -43,7 +45,7 @@ public class HomeViewModel extends ViewModel {
 
     public HomeViewModel() {
         mScanning = new MutableLiveData<>(false);
-        mIotDevices = new MutableLiveData<>(new ArrayList<>());
+        mIotDevices = new MutableLiveData<>(new HashSet<>());
         mText = new MutableLiveData<>();
         mText.setValue("SUPSI IoT devices");
     }
@@ -62,7 +64,7 @@ public class HomeViewModel extends ViewModel {
                 }
             };
 
-    private void scanBleDevice() {
+    public void scanBleDevice() {
         if (!mScanning.getValue()) {
             mIotDevices.getValue().clear();
             // Stops scanning after a pre-defined scan period.
@@ -97,9 +99,5 @@ public class HomeViewModel extends ViewModel {
         return mText;
     }
 
-    public LiveData<List<BluetoothDevice>> getIoTDevices() { return mIotDevices; }
-
-    public void refreshDevices(Context context) {
-        scanBleDevice();
-    }
+    public LiveData<Set<BluetoothDevice>> getIoTDevices() { return mIotDevices; }
 }

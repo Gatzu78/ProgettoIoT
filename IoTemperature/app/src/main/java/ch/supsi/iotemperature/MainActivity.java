@@ -39,7 +39,6 @@ public class MainActivity extends AppCompatActivity {
 
     private boolean mServiceBound = false;
     private BluetoothLeService mBluetoothLeService;
-    private BluetoothGattCharacteristic mNotifyCharacteristic;
 
     @Override
     protected void onStart() {
@@ -141,34 +140,40 @@ public class MainActivity extends AppCompatActivity {
             List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
             for (BluetoothGattCharacteristic characteristic : gattCharacteristics) {
                 UUID uuid = characteristic.getUuid();
-                Log.d(TAG, String.format("**** Char [%s]", uuid));
-                if(!uuid.equals(UUID_CURRENT_TIME_CHAR))
-                    continue;
 
                 final int charaProp = characteristic.getProperties();
-                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
-                    // If there is an active notification on a characteristic, clear
-                    // it first so it doesn't update the data field on the user interface.
-                    if (mNotifyCharacteristic != null) {
-                        mBluetoothLeService.setCharacteristicNotification(
-                                mNotifyCharacteristic, false);
-                        mNotifyCharacteristic = null;
-                    }
-                    mBluetoothLeService.readCharacteristic(characteristic);
-                }
-                if ((charaProp | BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
-                    mNotifyCharacteristic = characteristic;
-                    mBluetoothLeService.setCharacteristicNotification(
-                            characteristic, true);
-                }
-                return;
+                boolean canRead = (charaProp & BluetoothGattCharacteristic.PROPERTY_READ) > 0;
+                boolean canWrite = (charaProp & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
+                boolean canNotify = (charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0;
+                Log.d(TAG, String.format("**** Characteristics R=%s\tW=%s\tN=%s\t[%s]",
+                        canRead, canWrite, canNotify,
+                        SUPSIGattAttributes.lookup(uuid.toString(), uuid.toString())));
             }
         }
     }
 
     public void connect(String deviceAddress) {
-        registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+        //registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
         mBluetoothLeService.connect(deviceAddress);
+    }
+
+    public void asyncReadTime() {
+        mBluetoothLeService.asyncReadTime();
+    }
+
+    public void toggleLED() {
+        mBluetoothLeService.toggletLED1();
+    }
+
+    public void asyncReadTemperature() {
+        mBluetoothLeService.asyncReadTemperature();
+    }
+
+    public void asyncReadSampling() {
+        mBluetoothLeService.asyncReadSampling();
+    }
+    public void writeSampling(int value) {
+        mBluetoothLeService.writeSampling(value);
     }
 
     private static IntentFilter makeGattUpdateIntentFilter() {
@@ -176,4 +181,5 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         return intentFilter;
     }
+
 }

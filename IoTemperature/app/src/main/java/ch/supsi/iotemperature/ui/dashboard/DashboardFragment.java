@@ -5,6 +5,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -13,6 +15,9 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
+import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
 
@@ -32,19 +37,49 @@ public class DashboardFragment extends Fragment {
         dashboardViewModel = new ViewModelProvider(this).get(DashboardViewModel.class);
         View root = inflater.inflate(R.layout.fragment_dashboard, container, false);
 
-        // CONNECTION STATE
-        final TextView connState = root.findViewById(R.id.connection_state);
-        dashboardViewModel.getConnectionState().observe(getViewLifecycleOwner(), connState::setText);
-
-        // DEVICE NAME AND ADDRESS
+        // DEVICE NAME
         final TextView deviceName = root.findViewById(R.id.device_name);
-        final TextView deviceAddress = root.findViewById(R.id.device_address);
         dashboardViewModel.getDeviceName().observe(getViewLifecycleOwner(), name -> {
             deviceName.setText(name);
         });
 
+        // DEVICE ADDRESS
+        final TextView deviceAddress = root.findViewById(R.id.device_address);
         dashboardViewModel.getDeviceAddress().observe(getViewLifecycleOwner(), addr -> {
             deviceAddress.setText(addr);
+        });
+
+        // REFRESH DATA BUTTON
+        final Button btnRefreshData = root.findViewById(R.id.btnRefreshData);
+        btnRefreshData.setOnClickListener(view -> {
+            MainActivity main = (MainActivity) getActivity();
+            main.asyncReadTime();
+            main.asyncReadTemperature();
+            main.asyncReadSampling();
+        });
+
+        final EditText numSampling = root.findViewById(R.id.numSampling);
+        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
+            numSampling.setText(String.valueOf(value));
+        });
+
+        // LED BUTTON
+        final Button btnLED = root.findViewById(R.id.btnLED);
+        btnLED.setOnClickListener(view -> {
+            MainActivity main = (MainActivity) getActivity();
+            main.toggleLED();
+        });
+
+        dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), isOn -> {
+            btnLED.setText(isOn ? "TURN OFF LED" : "TURN ON LED");
+        });
+
+        // CONNECTION STATE
+        final TextView connState = root.findViewById(R.id.connection_state);
+        dashboardViewModel.isConnected().observe(getViewLifecycleOwner(), isConnected -> {
+            connState.setText(isConnected ? "CONNECTED" : "DISCONNECTED");
+            btnLED.setEnabled(isConnected);
+            btnRefreshData.setEnabled(isConnected);
         });
 
         // DEVICE DATA
