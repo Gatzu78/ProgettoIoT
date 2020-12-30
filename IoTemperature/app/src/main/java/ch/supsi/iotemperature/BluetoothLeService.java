@@ -75,10 +75,28 @@ public class BluetoothLeService extends Service {
     public final static String EXTRA_CHARACTERISTIC =
             "ch.supsi.iotemperature.EXTRA_CHARACTERISTIC";
 
-    // TODO SUPSI: Choose the proper characteristic
 
+    // MI BAND SERVICE
+    public final static UUID UUID_MI_BAND_BASIC_SERVICE =
+            UUID.fromString(SUPSIGattAttributes.MI_BAND_BASIC_SERVICE);
     public final static UUID UUID_CURRENT_TIME_CHAR =
             UUID.fromString(SUPSIGattAttributes.CURRENT_TIME_CHAR);
+
+    public final static UUID UUID_CLIENT_CHARACTERISTIC_CONFIG =
+            UUID.fromString(SUPSIGattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
+
+
+    // SUPSI SERVICE
+    public final static UUID UUID_TEMPERATURE_SERVICE =
+            UUID.fromString(SUPSIGattAttributes.TEMPERATURE_SERVICE);
+    public final static UUID UUID_SAMPLING_CHARACTERISTIC =
+            UUID.fromString(SUPSIGattAttributes.SAMPLING_CHARACTERISTIC);
+    public final static UUID UUID_TEMPERATURE_CHARACTERISTIC =
+            UUID.fromString(SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC);
+    public final static UUID UUID_LED_SERVICE =
+            UUID.fromString(SUPSIGattAttributes.LED_SERVICE);
+    public final static UUID UUID_LED1_CHARACTERISTIC =
+            UUID.fromString(SUPSIGattAttributes.LED1_CHARACTERISTIC);
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
@@ -106,39 +124,42 @@ public class BluetoothLeService extends Service {
         @Override
         public void onServicesDiscovered(BluetoothGatt gatt, int status) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
+                BluetoothGattService svc;
+
                 //TODO REMOVE
-                BluetoothGattService svc = mBluetoothGatt.getService(
-                        UUID.fromString(SUPSIGattAttributes.MI_BAND2_BASIC_SERVICE));
+                svc = mBluetoothGatt.getService(UUID_MI_BAND_BASIC_SERVICE);
                 if(svc != null) {
-                    mCurrentTimeChar = svc.getCharacteristic(
-                            UUID.fromString(SUPSIGattAttributes.CURRENT_TIME_CHAR));
+                    mCurrentTimeChar = svc.getCharacteristic(UUID_CURRENT_TIME_CHAR);
                     mCurrentTimeChar.setWriteType(WRITE_TYPE_DEFAULT);
                     setCharacteristicNotification(mCurrentTimeChar, true);
                 }
 
-                // LED
-                svc = mBluetoothGatt.getService(
-                        UUID.fromString(SUPSIGattAttributes.LED_SERVICE));
+                // LED SERVICE
+                svc = mBluetoothGatt.getService(UUID_LED_SERVICE);
                 if(svc != null) {
-                    mLED1Characteristic = svc.getCharacteristic(
-                            UUID.fromString(SUPSIGattAttributes.LED1_CHARACTERISTIC));
+                    mLED1Characteristic = svc.getCharacteristic(UUID_LED1_CHARACTERISTIC);
                     readCharacteristic(mLED1Characteristic);
                 }
 
-                // TEMPERATURE
-                svc = mBluetoothGatt.getService(
-                        UUID.fromString(SUPSIGattAttributes.TEMPERATURE_SERVICE));
+                // TEMPERATURE SERVICE
+                svc = mBluetoothGatt.getService(UUID_TEMPERATURE_SERVICE);
                 if(svc != null) {
-                    mTemperatureCharacteristic = svc.getCharacteristic(
-                            UUID.fromString(SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC));
-                    mSamplingCharacteristic = svc.getCharacteristic(
-                            UUID.fromString(SUPSIGattAttributes.SAMPLING_CHARACTERISTIC));
+                    mTemperatureCharacteristic = svc.getCharacteristic(UUID_TEMPERATURE_CHARACTERISTIC);
+                    mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
                     // ENABLE NOTIFICATION
                     setCharacteristicNotification(mTemperatureCharacteristic, true);
                 }
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
             } else {
                 Log.w(TAG, "onServicesDiscovered received: " + status);
+            }
+        }
+
+        @Override
+        public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
+            super.onCharacteristicWrite(gatt, characteristic, status);
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                broadcastUpdate(ACTION_DATA_AVAILABLE, characteristic);
             }
         }
 
@@ -176,14 +197,20 @@ public class BluetoothLeService extends Service {
 
         // TODO SUPSI: Choose the proper characteristic
         switch (characteristic.getUuid().toString()) {
-            case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
-                parseSamplingCharacteristic(action, characteristic, intent, format, shift);
-                break;
+            // MI BAND - TODO REMOTE
             case SUPSIGattAttributes.CURRENT_TIME_CHAR:
                 parseCurrentTimeCharacteristic(action, characteristic, intent, format, shift);
                 break;
+            // SUPSI
+            case SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC:
+                parseTemperatureCharacteristic(action, characteristic, intent, format, shift);
+                break;
+            case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
+                parseSamplingCharacteristic(action, characteristic, intent, format, shift);
+                break;
             case SUPSIGattAttributes.LED1_CHARACTERISTIC:
                 parseLED1Characteristic(action, characteristic, intent, format, shift);
+                break;
             default:
                 parseUnknownCharacteristic(action, characteristic, intent);
                 break;
@@ -191,11 +218,18 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent);
     }
 
+    private void parseTemperatureCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
+        int temperatureValue = characteristic.getIntValue(format, 0);
+        Log.d(TAG, String.format("*** CURRENT SAMPLING [%s] Action [%s] Extra [%d]",
+                characteristic.getUuid(), action, temperatureValue));
+        intent.putExtra(EXTRA_DATA, temperatureValue);
+    }
+
     private void parseSamplingCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
         mSamplingValue = characteristic.getIntValue(format, 0);
         Log.d(TAG, String.format("*** CURRENT SAMPLING [%s] Action [%s] Extra [%d]",
-                characteristic.getUuid(), action, mLED1Value));
-        intent.putExtra(EXTRA_DATA, mLED1Value);
+                characteristic.getUuid(), action, mSamplingValue));
+        intent.putExtra(EXTRA_DATA, mSamplingValue);
     }
 
     private void parseLED1Characteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
@@ -245,6 +279,7 @@ public class BluetoothLeService extends Service {
 
     public void writeSampling(int value) {
         mSamplingCharacteristic.setValue(value, BluetoothGattCharacteristic.FORMAT_UINT8, 0 );
+        writeCharacteristic(mSamplingCharacteristic);
     }
 
     public void asyncReadTemperature() {
@@ -256,8 +291,9 @@ public class BluetoothLeService extends Service {
     }
 
     public void toggletLED1() {
-        int status = mLED1Value ^ 1;
-        mLED1Characteristic.setValue(status, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+        mLED1Value = mLED1Value ^ 1;
+        mLED1Characteristic.setValue(mLED1Value, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+        writeCharacteristic(mSamplingCharacteristic);
     }
 
     public class LocalBinder extends Binder {
@@ -382,28 +418,32 @@ public class BluetoothLeService extends Service {
      *
      * @param characteristic The characteristic to read from.
      */
-    public void readCharacteristic(BluetoothGattCharacteristic characteristic) {
+    private void readCharacteristic(BluetoothGattCharacteristic characteristic) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
+
+        if (characteristic == null) {
+            Log.w(TAG, "Characteristic is null");
+            return;
+        }
+
         mBluetoothGatt.readCharacteristic(characteristic);
     }
 
-    public void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
+    private void writeCharacteristic(BluetoothGattCharacteristic characteristic) {
         if (mBluetoothAdapter == null || mBluetoothGatt == null) {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
-        mBluetoothGatt.writeCharacteristic(characteristic);
-    }
 
-    public BluetoothGattService getService(UUID uuid) {
-        if (mBluetoothAdapter == null || mBluetoothGatt == null) {
-            Log.w(TAG, "BluetoothAdapter not initialized");
-            return null;
+        if (characteristic == null) {
+            Log.w(TAG, "Characteristic is null");
+            return;
         }
-        return mBluetoothGatt.getService(uuid);
+
+        mBluetoothGatt.writeCharacteristic(characteristic);
     }
 
     /**
@@ -419,14 +459,14 @@ public class BluetoothLeService extends Service {
             return;
         }
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-
-        // TODO SUPSI: Choose the proper characteristic
-        if (UUID_CURRENT_TIME_CHAR.equals(characteristic.getUuid())) {
-            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-                    UUID.fromString(SUPSIGattAttributes.CLIENT_CHARACTERISTIC_CONFIG));
+        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+                UUID_CLIENT_CHARACTERISTIC_CONFIG);
+        if(descriptor != null) {
             descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
             mBluetoothGatt.writeDescriptor(descriptor);
-        }
+        } else
+            Log.w(TAG, "**** SetCharNotification - No Client Descriptor for " +
+                    characteristic.getUuid());
     }
 
     /**

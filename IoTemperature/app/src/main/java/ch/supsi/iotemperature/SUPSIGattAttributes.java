@@ -6,7 +6,7 @@ public class SUPSIGattAttributes {
     public static final String KEY_DEVICE_NAME = "DEVICE_NAME";
     public static final String KEY_DEVICE_ADDRESS = "DEVICE_ADDRESS";
 
-    private static HashMap<String, String> attributes = new HashMap();
+    private static final HashMap<String, String> attributes = new HashMap<>();
 
     public static final String CLIENT_CHARACTERISTIC_CONFIG = "00002902-0000-1000-8000-00805f9b34fb";
 
@@ -14,11 +14,11 @@ public class SUPSIGattAttributes {
     public static final String LED0_CHARACTERISTIC = "f0001111-0451-4000-b000-000000000000";
     public static final String LED1_CHARACTERISTIC = "f0001112-0451-4000-b000-000000000000";
 
-    public static final String TEMPERATURE_SERVICE = "f0001140-0451-4000-b000-000000000000";;
+    public static final String TEMPERATURE_SERVICE = "f0001140-0451-4000-b000-000000000000";
     public static final String TEMPERATURE_CHARACTERISTIC = "f0001141-0451-4000-b000-000000000000";
     public static final String SAMPLING_CHARACTERISTIC = "f0001142-0451-4000-b000-000000000000";
 
-    public static final String MI_BAND2_BASIC_SERVICE = "0000fee0-0000-1000-8000-00805f9b34fb";
+    public static final String MI_BAND_BASIC_SERVICE = "0000fee0-0000-1000-8000-00805f9b34fb";
     public static final String CURRENT_TIME_CHAR = "00002a2b-0000-1000-8000-00805f9b34fb";
     public static final String DEVICE_NAME_CHAR = "00002a00-0000-1000-8000-00805f9b34fb";
 
@@ -28,14 +28,23 @@ public class SUPSIGattAttributes {
 
     static {
         // SUPSI BLE
-        attributes.put(LED_SERVICE, "SUPSI LED Service");
+        attributes.put(LED_SERVICE, "LED Service");
         attributes.put(LED0_CHARACTERISTIC, "LED0 Characteristic");
         attributes.put(LED1_CHARACTERISTIC, "LED1 Characteristic");
 
+        attributes.put(TEMPERATURE_SERVICE, "TEMPERATURE Service");
+        attributes.put(TEMPERATURE_CHARACTERISTIC, "TEMPERATURE Characteristic");
+        attributes.put(SAMPLING_CHARACTERISTIC, "SAMPLING Characteristic");
+
+
+
         // MI_BAND2_BASIC_SERVICE
-        attributes.put(MI_BAND2_BASIC_SERVICE, "MI Band Basic Service");
+        attributes.put(MI_BAND_BASIC_SERVICE, "MI Band Basic Service");
         attributes.put(CURRENT_TIME_CHAR, "Current Time Characteristic");
         attributes.put(DEVICE_NAME_CHAR, "Device Name Characteristic");
+        attributes.put(HEART_RATE_SERVICE, "Heart Rate Service");
+        attributes.put(HEART_RATE_MEASUREMENT_CHAR, "Heart Rate Measurement Characteristic");
+        attributes.put(HEART_RATE_CONTROLPOINT_CHAR, "Heart Rate Control Point Characteristic");
 
         attributes.put("00001800-0000-1000-8000-00805f9b34fb", "Generic Access Service");
         attributes.put("00001801-0000-1000-8000-00805f9b34fb", "Generic Attribute Service");
@@ -48,7 +57,6 @@ public class SUPSIGattAttributes {
         attributes.put("00001808-0000-1000-8000-00805f9b34fb", "Glucose Service");
         attributes.put("00001809-0000-1000-8000-00805f9b34fb", "Health Thermometer Service");
         attributes.put("0000180a-0000-1000-8000-00805f9b34fb", "Device Information Service");
-        attributes.put(HEART_RATE_SERVICE, "Heart Rate Service");
         attributes.put("0000180e-0000-1000-8000-00805f9b34fb", "Phone Alert Status Service Service");
         attributes.put("0000180f-0000-1000-8000-00805f9b34fb", "Battery Service Service");
         attributes.put("00001810-0000-1000-8000-00805f9b34fb", "Blood Pressure Service");
@@ -78,7 +86,6 @@ public class SUPSIGattAttributes {
         attributes.put("00001829-0000-1000-8000-00805f9b34fb", "Reconnection Configuration Service");
 
         // Characteristics
-        attributes.put("00002a00-0000-1000-8000-00805f9b34fb", "Device Name Characteristic");
         attributes.put("00002a01-0000-1000-8000-00805f9b34fb", "Appearance Characteristic");
         attributes.put("00002a02-0000-1000-8000-00805f9b34fb", "Peripheral Privacy Flag Characteristic");
         attributes.put("00002a03-0000-1000-8000-00805f9b34fb", "Reconnection Address Characteristic");
@@ -121,7 +128,6 @@ public class SUPSIGattAttributes {
         attributes.put("00002a28-0000-1000-8000-00805f9b34fb", "Software Revision String Characteristic");
         attributes.put("00002a29-0000-1000-8000-00805f9b34fb", "Manufacturer Name String Characteristic");
         attributes.put("00002a2a-0000-1000-8000-00805f9b34fb", "IEEE 11073-20601 Regulatory Certification Data List Characteristic");
-        attributes.put(CURRENT_TIME_CHAR, "Current Time Characteristic");
         attributes.put("00002a2c-0000-1000-8000-00805f9b34fb", "Magnetic Declination Characteristic");
         attributes.put("00002a2f-0000-1000-8000-00805f9b34fb", "Position 2D Characteristic");
         attributes.put("00002a30-0000-1000-8000-00805f9b34fb", "Position 3D Characteristic");
@@ -131,9 +137,7 @@ public class SUPSIGattAttributes {
         attributes.put("00002a34-0000-1000-8000-00805f9b34fb", "Glucose Measurement Context Characteristic");
         attributes.put("00002a35-0000-1000-8000-00805f9b34fb", "Blood Pressure Measurement Characteristic");
         attributes.put("00002a36-0000-1000-8000-00805f9b34fb", "Intermediate Cuff Pressure Characteristic");
-        attributes.put(HEART_RATE_MEASUREMENT_CHAR, "Heart Rate Measurement Characteristic");
         attributes.put("00002a38-0000-1000-8000-00805f9b34fb", "Body Sensor Location Characteristic");
-        attributes.put(HEART_RATE_CONTROLPOINT_CHAR, "Heart Rate Control Point Characteristic");
         attributes.put("00002a3a-0000-1000-8000-00805f9b34fb", "Removable Characteristic");
         attributes.put("00002a3b-0000-1000-8000-00805f9b34fb", "Service Required Characteristic");
         attributes.put("00002a3c-0000-1000-8000-00805f9b34fb", "Scientific Temperature Celsius Characteristic");

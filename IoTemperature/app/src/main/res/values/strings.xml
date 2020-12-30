@@ -2,7 +2,6 @@
     <string name="app_name">IoTemperature</string>
     <string name="title_home">Home</string>
     <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
     <string name="ble_not_supported">BLE not supported on this device</string>
     <string name="bluetooth_not_supported">BLE not supported on this device</string>
     <string name="btn_scan">SCAN</string>

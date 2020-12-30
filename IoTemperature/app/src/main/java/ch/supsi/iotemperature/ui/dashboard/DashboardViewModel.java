@@ -12,6 +12,7 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.time.LocalDateTime;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,6 +21,7 @@ import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardViewModel extends ViewModel {
     private final static String TAG = DashboardViewModel.class.getSimpleName();
+    private static final int NUM_OF_TEMP_VALUES = 20;
 
     private MutableLiveData<String> mDeviceAddress;
     private MutableLiveData<String> mDeviceName;
@@ -27,6 +29,7 @@ public class DashboardViewModel extends ViewModel {
     private final MutableLiveData<Boolean> mLED1On;
     private final MutableLiveData<List<String>> mData;
     private final MutableLiveData<Integer> mSamplingValue;
+    private final MutableLiveData<List<Integer>> mTemperatures;
 
     public DashboardViewModel() {
         Log.i(TAG, "**** NEW DashboardViewModel");
@@ -37,6 +40,7 @@ public class DashboardViewModel extends ViewModel {
         mDeviceAddress = new MutableLiveData<>("-");
         mDeviceName = new MutableLiveData<>("-");
         mSamplingValue = new MutableLiveData<>(2);
+        mTemperatures = new MutableLiveData<>(new ArrayList<>());
     }
 
     public LiveData<List<String>> getData() { return mData; }
@@ -102,20 +106,35 @@ public class DashboardViewModel extends ViewModel {
         switch (intent.getStringExtra(BluetoothLeService.EXTRA_CHARACTERISTIC)) {
             case SUPSIGattAttributes.CURRENT_TIME_CHAR:
                 LocalDateTime time = (LocalDateTime)intent.getSerializableExtra(BluetoothLeService.EXTRA_DATA);
-                displayData(time.toString());
+                displayData(String.format("Time: %s", time));
                 break;
             case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
                 int sampling = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
                 mSamplingValue.setValue(sampling);
+                displayData(String.format("Sampling: %d", sampling));
                 break;
             case SUPSIGattAttributes.LED1_CHARACTERISTIC:
                 int led1Status = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
                 mLED1On.setValue(led1Status == 1);
+                displayData(String.format("LED1: %d", led1Status));
+                break;
+            case SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC:
+                Integer temperature = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
+                updateTemperatureCollection(temperature);
+                displayData(String.format("Temperature: %d", temperature));
                 break;
             default:
                 String extra = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
                 displayData(extra);
                 break;
         }
+    }
+
+    private void updateTemperatureCollection(int temperature) {
+        List<Integer> values = mTemperatures.getValue();
+        values.add(temperature);
+        while (values.size() > NUM_OF_TEMP_VALUES)
+            values.remove(0);
+        mTemperatures.setValue(values);
     }
 }

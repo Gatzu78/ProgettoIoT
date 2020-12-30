@@ -40,7 +40,7 @@ public class HomeViewModel extends ViewModel {
 
     // Stops scanning after 20 seconds.
     private static final long SCAN_PERIOD = 20000;
-    private static final String MATCH_PATTERN_NAME = "M"; //"SUPSI IoT"
+    private static final String MATCH_PATTERN_NAME = "SUPSI"; //"SUPSI IoT"
     private static final String MATCH_PATTERN_ADDR = ""; //"80:6f:b0"
 
     public HomeViewModel() {

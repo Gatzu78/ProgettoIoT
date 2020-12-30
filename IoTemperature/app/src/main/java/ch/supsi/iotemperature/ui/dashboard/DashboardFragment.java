@@ -15,8 +15,6 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
 import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
@@ -58,27 +56,34 @@ public class DashboardFragment extends Fragment {
             main.asyncReadSampling();
         });
 
-        final EditText numSampling = root.findViewById(R.id.numSampling);
-        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
-            numSampling.setText(String.valueOf(value));
-        });
-
         // LED BUTTON
         final Button btnLED = root.findViewById(R.id.btnLED);
         btnLED.setOnClickListener(view -> {
             MainActivity main = (MainActivity) getActivity();
-            main.toggleLED();
+            main.toggleLED1();
         });
 
         dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), isOn -> {
             btnLED.setText(isOn ? "TURN OFF LED" : "TURN ON LED");
         });
 
+        // SAMPLING
+        final Button btnSampling = root.findViewById(R.id.btnSampling);
+        btnSampling.setOnClickListener(view -> {
+            MainActivity main = (MainActivity) getActivity();
+            main.writeSampling(dashboardViewModel.getSamplingValue().getValue());
+        });
+        final EditText numSampling = root.findViewById(R.id.numSampling);
+        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
+            numSampling.setText(String.valueOf(value));
+        });
+
         // CONNECTION STATE
         final TextView connState = root.findViewById(R.id.connection_state);
         dashboardViewModel.isConnected().observe(getViewLifecycleOwner(), isConnected -> {
-            connState.setText(isConnected ? "CONNECTED" : "DISCONNECTED");
+            connState.setText(isConnected ? "Connected" : "Not Connected");
             btnLED.setEnabled(isConnected);
+            btnSampling.setEnabled(isConnected);
             btnRefreshData.setEnabled(isConnected);
         });
 
