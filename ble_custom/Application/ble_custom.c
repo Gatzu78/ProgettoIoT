@@ -2069,7 +2069,8 @@ void ProjectZero_TempService_ValueChangeHandler(
         // -------------------------
         // Set the timer 0 interval based on the input value
 
-        Timer_setPeriod(handle[0], Timer_PERIOD_US, 1000000*pCharData->data[0]);
+        //TODO MASSIMO: RIABILITARE Timer_setPeriod
+        //Timer_setPeriod(handle[0], Timer_PERIOD_US, 1000000*pCharData->data[0]);
         break;
 
 
@@ -2187,6 +2188,12 @@ static void ProjectZero_updateCharVal(pzCharacteristicData_t *pCharData)
 {
     switch(pCharData->svcUUID)
     {
+    //TODO MASSIMO: forse dovremmo aggiungere anche TEMP SERVICE
+    case TEMP_SERVICE_SERV_UUID:
+        TempService_SetParameter(pCharData->paramID, pCharData->dataLen,
+                                pCharData->data);
+        break;
+
     case LED_SERVICE_SERV_UUID:
         LedService_SetParameter(pCharData->paramID, pCharData->dataLen,
                                 pCharData->data);

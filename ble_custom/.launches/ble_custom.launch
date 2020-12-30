@@ -7,7 +7,7 @@
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROGRAM.CC2642R1F.ccxml.Texas Instruments XDS110 USB Debug Probe/Cortex_M4_0" value="${build_artifact:ble_custom}"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROJECT.CC2642R1F.ccxml.Texas Instruments XDS110 USB Debug Probe/Cortex_M4_0" value="ble_custom"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_TARGET_CONFIG" value="${target_config_active_default:ble_custom}"/>
-<stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.CC2642R1F.ccxml.Texas Instruments XDS110 USB Debug Probe/Cortex_M4_0" value="D:\TI\ble_custom\Debug\ble_custom.out"/>
+<stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.CC2642R1F.ccxml.Texas Instruments XDS110 USB Debug Probe/Cortex_M4_0" value="C:\Users\massi\source\iot\ProgettoIoT\ble_custom\Debug\ble_custom.out"/>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
 <listEntry value="/ble_custom"/>
 </listAttribute>

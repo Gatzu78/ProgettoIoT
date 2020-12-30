@@ -112,10 +112,22 @@ void PWMCfg(void);
 /*This Function simulates a temperature variation on a sinus 0.1Hz 20° offset and 5° Vpeak
  * Updates temperature value in temp_tervice*/
 
+int timer_delay = 0;
+uint32_t count = 0;
+double sVal = 0.0;
 void TempSimulator(Timer_Handle handlecaller, int_fast16_t status){
-    int temp=20;
+    uint8_t temp=20;
 
-    temp += (int)sin(2 * PI * 0.1 * Timer_getCount(handle[1]) / 1000);
+    // delay the execution up to 2 seconds (200ms*10)
+    if(timer_delay < 10) {
+        timer_delay++;
+        return;
+    }
+    timer_delay = 0;
+
+    count = Timer_getCount(handle[1]);
+    sVal = sin(2 * PI * 0.1 * count / 1000);
+    temp += (uint8_t)sVal;
     TempService_SetParameter(TS_TEMP_ID, sizeof(temp), &temp);
 }
 
@@ -163,6 +175,12 @@ int main()
     UART_init();
     UartLog_init(UART_open(CONFIG_DISPLAY_UART, NULL));
 
+    Timer_init();
+    TimerCfg();
+
+    //PWM_init();
+    //PWMCfg();
+
     /* Initialize ICall module */
     ICall_init();
 
@@ -173,12 +191,6 @@ int main()
 
     /* enable interrupts and start SYS/BIOS */
     BIOS_start();
-
-    Timer_init();
-    PWM_init();
-    TimerCfg();
-    PWMCfg();
-
 
     //PIN_setOutputValue(ledPinHandle, CONFIG_PIN_RLED, pCharData->data[0]); //funzione esempio per settare led0
 
@@ -295,21 +307,21 @@ void AssertHandler(uint8_t assertCause, uint8_t assertSubcause)
 
 void TimerCfg(){
     extern Timer_Handle    handle[2];
-    Timer_Params    params;
+    Timer_Params    params[2];
 
-    Timer_Params_init(&params);
-    params.periodUnits = Timer_PERIOD_US;
-    params.period = 2000000;                //callback ogni 2 secondi di default
-    params.timerMode  = Timer_CONTINUOUS_CALLBACK;
-    params.timerCallback = TempSimulator;
-    handle[0] = Timer_open(CONFIG_TIMER0, &params);
+    Timer_Params_init(&params[0]);
+    params[0].periodUnits = Timer_PERIOD_US;
+    params[0].period = 200000;                //callback ogni 100 ms di default
+    params[0].timerMode  = Timer_CONTINUOUS_CALLBACK;
+    params[0].timerCallback = TempSimulator;
+    handle[0] = Timer_open(CONFIG_TIMER0, &params[0]);
     Timer_start(handle[0]);
 
-    Timer_Params_init(&params);
-    params.periodUnits = Timer_PERIOD_HZ;
-    params.period = 1000;
-    params.timerMode  = Timer_FREE_RUNNING;
-    handle[1] = Timer_open(CONFIG_TIMER1, &params);
+    Timer_Params_init(&params[1]);
+    params[1].periodUnits = Timer_PERIOD_HZ;
+    params[1].period = 1000;
+    params[1].timerMode  = Timer_FREE_RUNNING;
+    handle[1] = Timer_open(CONFIG_TIMER1, &params[1]);
     Timer_start(handle[1]);
 
     //sleep(10000);

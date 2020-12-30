@@ -1,2 +1,5 @@
 /IoTemperature2/build/
 /IoTemperature2/.gradle
+/ble_custom/.cssproject
+/ble_custom/src/makefile.libs
+/ble_custom/src/sysbios
