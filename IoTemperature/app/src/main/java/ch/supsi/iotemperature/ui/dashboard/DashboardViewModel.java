@@ -1,6 +1,5 @@
 package ch.supsi.iotemperature.ui.dashboard;
 
-import android.bluetooth.BluetoothGattService;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -12,7 +11,6 @@ import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
 import java.time.LocalDateTime;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,7 +25,7 @@ public class DashboardViewModel extends ViewModel {
     private MutableLiveData<String> mDeviceName;
     private final MutableLiveData<Integer> mConnectionStatus;
     private final MutableLiveData<Boolean> mLED1On;
-    private final MutableLiveData<List<String>> mData;
+    private final MutableLiveData<List<String>> mLog;
     private final MutableLiveData<Integer> mSamplingValue;
     private final MutableLiveData<List<Integer>> mTemperatures;
 
@@ -35,7 +33,7 @@ public class DashboardViewModel extends ViewModel {
         Log.i(TAG, "**** NEW DashboardViewModel");
 
         mLED1On = new MutableLiveData<>(false);
-        mData = new MutableLiveData<>(new ArrayList<>());
+        mLog = new MutableLiveData<>(new ArrayList<>());
         mConnectionStatus = new MutableLiveData<>(BluetoothLeService.STATE_CONNECTING);
         mDeviceAddress = new MutableLiveData<>("-");
         mDeviceName = new MutableLiveData<>("-");
@@ -43,7 +41,9 @@ public class DashboardViewModel extends ViewModel {
         mTemperatures = new MutableLiveData<>(new ArrayList<>());
     }
 
-    public LiveData<List<String>> getData() { return mData; }
+    public LiveData<List<String>> getLog() { return mLog; }
+    public LiveData<List<Integer>> getTemperatures() { return mTemperatures; }
+
     public LiveData<Integer> getSamplingValue() {
         return mSamplingValue;
     }
@@ -73,8 +73,8 @@ public class DashboardViewModel extends ViewModel {
     }
 
     private void displayData(String data) {
-        mData.getValue().add(data);
-        mData.setValue(mData.getValue());
+        mLog.getValue().add(0, data);
+        mLog.setValue(mLog.getValue());
     }
 
     // Handles various events fired by the Service.

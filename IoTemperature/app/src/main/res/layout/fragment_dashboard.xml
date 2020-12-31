@@ -10,8 +10,8 @@
 
 
     <LinearLayout
-        android:layout_margin="8dp"
         android:orientation="horizontal"
+        android:layout_margin="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <TextView
@@ -36,15 +36,16 @@
     </LinearLayout>
 
     <LinearLayout
+        android:orientation="horizontal"
         android:layout_margin="8dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
-        <Switch
+        <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/ledSwitch"
             android:layout_width="103dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="LED" />
+            android:text="@string/led" />
 
         <Button
             android:layout_marginEnd="8dp"
@@ -53,8 +54,7 @@
             android:layout_height="wrap_content"
             android:text="@string/temperature" />
 
-        <ImageButton
-
+        <androidx.appcompat.widget.AppCompatImageButton
             android:layout_margin="8dp"
             android:id="@+id/btnSampling"
             android:layout_width="wrap_content"
@@ -62,6 +62,10 @@
             android:background="@android:drawable/ic_menu_preferences"
              />
     </LinearLayout>
+    <com.github.mikephil.charting.charts.BarChart
+        android:id="@+id/chart"
+        android:layout_width="match_parent"
+        android:layout_height="200dp" />
 
     <ListView
         android:id="@+id/listViewBLEData"

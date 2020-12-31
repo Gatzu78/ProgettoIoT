@@ -1,6 +1,7 @@
 package ch.supsi.iotemperature.ui.dashboard;
 
 import android.app.Dialog;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -10,14 +11,27 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.NumberPicker;
-import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.components.AxisBase;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.formatter.ValueFormatter;
+import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
+
+import java.text.DecimalFormat;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import ch.supsi.iotemperature.BluetoothLeService;
@@ -60,7 +74,7 @@ public class DashboardFragment extends Fragment {
         });
 
         // LED BUTTON
-        final Switch ledSwitch = root.findViewById(R.id.ledSwitch);
+        final SwitchCompat ledSwitch = root.findViewById(R.id.ledSwitch);
         ledSwitch.setOnClickListener(view -> Objects.requireNonNull(mainActivity).toggleLED1());
 
         dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), ledSwitch::setChecked);
@@ -87,9 +101,9 @@ public class DashboardFragment extends Fragment {
         });
 
 
-        // DEVICE DATA
+        // LOG
         final ListView dataListView = root.findViewById(R.id.listViewBLEData);
-        dashboardViewModel.getData().observe(getViewLifecycleOwner(), itemList -> {
+        dashboardViewModel.getLog().observe(getViewLifecycleOwner(), itemList -> {
             if(itemList != null) {
                 bleDataAdapter = new BLEDataAdapter(this.getContext(), itemList);
                 dataListView.setAdapter(bleDataAdapter);
@@ -97,7 +111,45 @@ public class DashboardFragment extends Fragment {
             bleDataAdapter.notifyDataSetChanged();
         });
 
+        // CHART
+        final BarChart chart = root.findViewById(R.id.chart);
+        chart.getDescription().setEnabled(false);
+        chart.setDrawGridBackground(false);
+        // Set Y Axis boundaries
+        chart.getAxisLeft().setAxisMaximum(30);
+        chart.getAxisLeft().setAxisMinimum(0);
+        chart.getAxisLeft().setValueFormatter(new ValueFormatter() {
+            private final DecimalFormat mFormat= new DecimalFormat("0.0");
+            @Override
+            public String getFormattedValue(float value) {
+                return mFormat.format(value);
+            }
+        });
+        // Hide Right Axis
+        chart.getAxisRight().setEnabled(false);
+        // Hide X Axis
+        chart.getXAxis().setEnabled(false);
+
+        dashboardViewModel.getTemperatures().observe(getViewLifecycleOwner(), temperatures -> {
+            BarData data = transformData(temperatures);
+            chart.setData(data);
+            chart.invalidate();
+        });
+
         return root;
+    }
+
+    private BarData transformData(List<Integer> itemList) {
+        ArrayList<BarEntry> data = new ArrayList<>();
+        for (int i=0; i<itemList.size(); i++)
+            data.add(new BarEntry(i, itemList.get(i)));
+
+        BarDataSet dataSet = new BarDataSet(data, "Temperature");
+        dataSet.setColor(Color.BLUE);
+
+        ArrayList<IBarDataSet> dataSets = new ArrayList<>();
+        dataSets.add(dataSet);
+        return new BarData(dataSets);
     }
 
     private void showSamplingDialog() {
