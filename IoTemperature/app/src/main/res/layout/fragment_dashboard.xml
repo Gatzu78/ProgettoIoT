@@ -1,55 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.dashboard.DashboardFragment"
     android:orientation="vertical">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <Button
-            android:layout_margin="4dp"
-            android:id="@+id/btnRefreshData"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Load data" />
-        <Button
-            android:id="@+id/btnLED"
-            android:layout_margin="4dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Turn on LED" />
-    </LinearLayout>
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-        <TextView
-            android:layout_margin="4dp"
-            android:id="@+id/textView"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sampling (sec)" />
-
-        <EditText
-            android:layout_margin="4dp"
-            android:id="@+id/numSampling"
-            android:layout_width="70dp"
-            android:layout_height="wrap_content"
-            android:ems="10"
-            android:inputType="number" />
-        <Button
-            android:layout_margin="4dp"
-            android:id="@+id/btnSampling"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Sampling" />
-    </LinearLayout>
-
-    <LinearLayout
+        android:layout_margin="8dp"
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -57,32 +18,50 @@
             android:id="@+id/device_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
             android:textAlignment="center"
-            android:textSize="20sp"
             tools:text="device_name" />
         <TextView
-            android:id="@+id/connection_state"
+            android:id="@+id/device_address"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginEnd="8dp"
             android:textAlignment="center"
-            android:textSize="20sp"
-            tools:text="STATUS" />
+            android:textSize="14sp"
+            android:layout_weight="1"
+            tools:text="@string/device_address" />
+        <Button
+            android:id="@+id/btnConnect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/connect" />
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_margin="8dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <Switch
+            android:id="@+id/ledSwitch"
+            android:layout_width="103dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="LED" />
 
-    <TextView
-        android:id="@+id/device_address"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:textAlignment="center"
-        android:textSize="14sp"
-        tools:text="address" />
+        <Button
+            android:layout_marginEnd="8dp"
+            android:id="@+id/btnRefreshData"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/temperature" />
+
+        <ImageButton
+
+            android:layout_margin="8dp"
+            android:id="@+id/btnSampling"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@android:drawable/ic_menu_preferences"
+             />
+    </LinearLayout>
 
     <ListView
         android:id="@+id/listViewBLEData"

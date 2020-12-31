@@ -1,15 +1,16 @@
 package ch.supsi.iotemperature.ui.dashboard;
 
+import android.app.Dialog;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.NumberPicker;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -17,6 +18,9 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import java.util.Objects;
+
+import ch.supsi.iotemperature.BluetoothLeService;
 import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
@@ -41,68 +45,47 @@ public class DashboardFragment extends Fragment {
 
         // DEVICE NAME
         final TextView deviceName = root.findViewById(R.id.device_name);
-        dashboardViewModel.getDeviceName().observe(getViewLifecycleOwner(), name -> {
-            deviceName.setText(name);
-        });
+        dashboardViewModel.getDeviceName().observe(getViewLifecycleOwner(),
+                deviceName::setText);
 
         // DEVICE ADDRESS
         final TextView deviceAddress = root.findViewById(R.id.device_address);
-        dashboardViewModel.getDeviceAddress().observe(getViewLifecycleOwner(), addr -> {
-            deviceAddress.setText(addr);
-        });
+        dashboardViewModel.getDeviceAddress().observe(getViewLifecycleOwner(),
+                deviceAddress::setText);
 
         // REFRESH DATA BUTTON
         final Button btnRefreshData = root.findViewById(R.id.btnRefreshData);
         btnRefreshData.setOnClickListener(view -> {
-            MainActivity main = (MainActivity) getActivity();
-            main.asyncReadTemperature();
+            mainActivity.asyncReadTemperature();
         });
 
         // LED BUTTON
-        final Button btnLED = root.findViewById(R.id.btnLED);
-        btnLED.setOnClickListener(view -> {
-            mainActivity.toggleLED1();
-        });
+        final Switch ledSwitch = root.findViewById(R.id.ledSwitch);
+        ledSwitch.setOnClickListener(view -> Objects.requireNonNull(mainActivity).toggleLED1());
 
-        dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), isOn -> {
-            btnLED.setText(isOn ? "TURN OFF LED" : "TURN ON LED");
-        });
+        dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), ledSwitch::setChecked);
 
         // SAMPLING
-        final Button btnSampling = root.findViewById(R.id.btnSampling);
+        final ImageButton btnSampling = root.findViewById(R.id.btnSampling);
         btnSampling.setOnClickListener(view -> {
-            mainActivity.writeSampling(dashboardViewModel.getSamplingValue().getValue());
+            showSamplingDialog();
         });
 
-        final EditText numSampling = root.findViewById(R.id.numSampling);
-        numSampling.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                dashboardViewModel.setSampling(Integer.parseInt(s.toString()));
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-
-            }
-        });
-
-        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
-            numSampling.setText(String.valueOf(value));
+        final Button btnConnect = root.findViewById(R.id.btnConnect);
+        btnConnect.setOnClickListener(view -> {
+            mainActivity.connect(mDeviceAddress);
         });
 
         // CONNECTION STATE
-        final TextView connState = root.findViewById(R.id.connection_state);
-        dashboardViewModel.isConnected().observe(getViewLifecycleOwner(), isConnected -> {
-            connState.setText(isConnected ? "Connected" : "Not Connected");
-            btnLED.setEnabled(isConnected);
-            btnSampling.setEnabled(isConnected);
-            btnRefreshData.setEnabled(isConnected);
+        dashboardViewModel.getConnStatus().observe(getViewLifecycleOwner(), status -> {
+            btnConnect.setText(status == BluetoothLeService.STATE_CONNECTED ? "CONNECTED" :
+                    status == BluetoothLeService.STATE_CONNECTING ? "CONNECTING" : "CONNECT");
+            ledSwitch.setEnabled(status == BluetoothLeService.STATE_CONNECTED);
+            btnSampling.setEnabled(status == BluetoothLeService.STATE_CONNECTED);
+            btnRefreshData.setEnabled(status == BluetoothLeService.STATE_CONNECTED);
+            btnConnect.setEnabled(status == BluetoothLeService.STATE_DISCONNECTED);
         });
+
 
         // DEVICE DATA
         final ListView dataListView = root.findViewById(R.id.listViewBLEData);
@@ -115,6 +98,32 @@ public class DashboardFragment extends Fragment {
         });
 
         return root;
+    }
+
+    private void showSamplingDialog() {
+        final Dialog dialog = new Dialog(getContext());
+        dialog.setContentView(R.layout.sampling_dialog);
+
+        final NumberPicker np = dialog.findViewById(R.id.numSampling);
+        Integer value = dashboardViewModel.getSamplingValue().getValue();
+        if(value != null)
+            np.setValue(value);
+        np.setMaxValue(1000);
+        np.setMinValue(1);
+        np.setWrapSelectorWheel(false);
+
+        Button btnConfirm =  dialog.findViewById(R.id.btnConfirm);
+        btnConfirm.setOnClickListener(view -> {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            mainActivity.writeSampling(np.getValue());
+            dashboardViewModel.setSampling(np.getValue());
+            dialog.dismiss();
+        });
+
+        Button btnCancel = dialog.findViewById(R.id.btnCancel);
+        btnCancel.setOnClickListener(view -> dialog.dismiss());
+
+        dialog.show();
     }
 
     @Override

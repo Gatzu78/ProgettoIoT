@@ -58,10 +58,12 @@ public class BluetoothLeService extends Service {
     private BluetoothGattCharacteristic mSamplingCharacteristic;
     private BluetoothGattCharacteristic mCurrentTimeChar;
 
-    private static final int STATE_DISCONNECTED = 0;
-    private static final int STATE_CONNECTING = 1;
-    private static final int STATE_CONNECTED = 2;
+    public static final int STATE_DISCONNECTED = 0;
+    public static final int STATE_CONNECTING = 1;
+    public static final int STATE_CONNECTED = 2;
 
+    public final static String ACTION_GATT_CONNECTING =
+            "ch.supsi.iotemperature.ACTION_GATT_CONNECTING";
     public final static String ACTION_GATT_CONNECTED =
             "ch.supsi.iotemperature.ACTION_GATT_CONNECTED";
     public final static String ACTION_GATT_DISCONNECTED =
@@ -103,21 +105,18 @@ public class BluetoothLeService extends Service {
     private final BluetoothGattCallback mGattCallback = new BluetoothGattCallback() {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
-            String intentAction;
             if (newState == BluetoothProfile.STATE_CONNECTED) {
-                intentAction = ACTION_GATT_CONNECTED;
                 mConnectionState = STATE_CONNECTED;
-                broadcastUpdate(intentAction);
+                broadcastUpdate(ACTION_GATT_CONNECTED);
                 Log.i(TAG, "**** Connected to GATT server.");
 
                 // Attempts to discover services after successful connection.
                 Log.i(TAG, "**** Attempting to start service discovery:" +
                         mBluetoothGatt.discoverServices());
             } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                intentAction = ACTION_GATT_DISCONNECTED;
                 mConnectionState = STATE_DISCONNECTED;
                 Log.i(TAG, "**** Disconnected from GATT server.");
-                broadcastUpdate(intentAction);
+                broadcastUpdate(ACTION_GATT_DISCONNECTED);
             }
         }
 
@@ -134,28 +133,35 @@ public class BluetoothLeService extends Service {
                     setCharacteristicNotification(mCurrentTimeChar, true);
                 }
 
-                // LED SERVICE
-                svc = mBluetoothGatt.getService(UUID_LED_SERVICE);
-                if(svc != null) {
-                    mLED1Characteristic = svc.getCharacteristic(UUID_LED1_CHARACTERISTIC);
-                    asyncReadLED1();
-                }
-
                 // TEMPERATURE SERVICE
                 svc = mBluetoothGatt.getService(UUID_TEMPERATURE_SERVICE);
                 if(svc != null) {
                     mTemperatureCharacteristic = svc.getCharacteristic(UUID_TEMPERATURE_CHARACTERISTIC);
-                    if(mTemperatureCharacteristic == null)
+                    if(mTemperatureCharacteristic == null) {
                         Log.e(TAG, "**** TEMP CHAR not found");
-                    asyncReadTemperature();
+                    } else {
+                        // ENABLE NOTIFICATION
+                        setCharacteristicNotification(mTemperatureCharacteristic, true);
+                    }
 
                     mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
-                    if(mSamplingCharacteristic == null)
+                    if(mSamplingCharacteristic == null) {
                         Log.e(TAG, "**** SAMPLING CHAR not found");
-                    asyncReadSampling();
+                    } else {
+                        // GET CURRENT VALUE
+                        asyncReadSampling();
+                    }
+                }
 
-                    // ENABLE NOTIFICATION
-                    setCharacteristicNotification(mTemperatureCharacteristic, true);
+                // LED SERVICE
+                svc = mBluetoothGatt.getService(UUID_LED_SERVICE);
+                if(svc != null) {
+                    mLED1Characteristic = svc.getCharacteristic(UUID_LED1_CHARACTERISTIC);
+                    if(mLED1Characteristic == null) {
+                        Log.e(TAG, "**** LED1 CHAR not found");
+                    } else {
+                        asyncReadLED1();
+                    }
                 }
                 broadcastUpdate(ACTION_GATT_SERVICES_DISCOVERED);
             } else {
@@ -189,6 +195,7 @@ public class BluetoothLeService extends Service {
 
     private void broadcastUpdate(final String action) {
         final Intent intent = new Intent(action);
+        intent.putExtra(EXTRA_DATA, mConnectionState);
         sendBroadcast(intent);
     }
 
@@ -378,6 +385,7 @@ public class BluetoothLeService extends Service {
             Log.d(TAG, "Trying to use an existing mBluetoothGatt for connection.");
             if (mBluetoothGatt.connect()) {
                 mConnectionState = STATE_CONNECTING;
+                broadcastUpdate(ACTION_GATT_CONNECTING);
                 return true;
             } else {
                 return false;

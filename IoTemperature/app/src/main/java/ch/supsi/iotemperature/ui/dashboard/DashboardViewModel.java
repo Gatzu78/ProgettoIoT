@@ -25,7 +25,7 @@ public class DashboardViewModel extends ViewModel {
 
     private MutableLiveData<String> mDeviceAddress;
     private MutableLiveData<String> mDeviceName;
-    private final MutableLiveData<Boolean> mConnected;
+    private final MutableLiveData<Integer> mConnectionStatus;
     private final MutableLiveData<Boolean> mLED1On;
     private final MutableLiveData<List<String>> mData;
     private final MutableLiveData<Integer> mSamplingValue;
@@ -36,12 +36,11 @@ public class DashboardViewModel extends ViewModel {
 
         mLED1On = new MutableLiveData<>(false);
         mData = new MutableLiveData<>(new ArrayList<>());
-        mConnected = new MutableLiveData<>(false);
+        mConnectionStatus = new MutableLiveData<>(BluetoothLeService.STATE_CONNECTING);
         mDeviceAddress = new MutableLiveData<>("-");
         mDeviceName = new MutableLiveData<>("-");
         mSamplingValue = new MutableLiveData<>(0);
         mTemperatures = new MutableLiveData<>(new ArrayList<>());
-
     }
 
     public LiveData<List<String>> getData() { return mData; }
@@ -51,8 +50,8 @@ public class DashboardViewModel extends ViewModel {
     public LiveData<Boolean> isLED1On() {
         return mLED1On;
     }
-    public LiveData<Boolean> isConnected() {
-        return mConnected;
+    public LiveData<Integer> getConnStatus() {
+        return mConnectionStatus;
     }
     public LiveData<String> getDeviceName() {
         return mDeviceName;
@@ -88,10 +87,13 @@ public class DashboardViewModel extends ViewModel {
         @Override
         public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
-        if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-            mConnected.setValue(true);
+
+        if (BluetoothLeService.ACTION_GATT_CONNECTING.equals(action)) {
+            mConnectionStatus.setValue(BluetoothLeService.STATE_CONNECTING);
+        } else if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+            mConnectionStatus.setValue(BluetoothLeService.STATE_CONNECTED);
         } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-            mConnected.setValue(false);
+            mConnectionStatus.setValue(BluetoothLeService.STATE_DISCONNECTED);
         } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
             processData(intent);
         }

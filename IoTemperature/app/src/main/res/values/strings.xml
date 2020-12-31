@@ -11,4 +11,11 @@
     <string name="no_data">no data</string>
     <string name="unknown_service">unknown service</string>
     <string name="unknown_characteristic">unknown characteristic</string>
+    <string name="connect">Connect</string>
+    <string name="temperature">Temperature</string>
+    <string name="turn_on_led">Turn on LED</string>
+    <string name="sampling">Sampling</string>
+    <string name="device_address">address</string>
+    <string name="ok">Ok</string>
+    <string name="cancel">Cancel</string>
 </resources>
