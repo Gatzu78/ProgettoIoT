@@ -25,9 +25,17 @@
 #include "icall_ble_api.h"
 
 #include "temp_service.h"
+#include "math.h"
 
 /*********************************************************************
  * MACROS
+ */
+#ifndef PI
+#define PI 3.14159265
+#endif
+
+/*********************************************************************
+ *  EXTERNAL VARIABLES
  */
 
 /*********************************************************************
@@ -41,6 +49,7 @@
 /*********************************************************************
  * GLOBAL VARIABLES
  */
+Timer_Handle timerHandle[2];
 
 // Temp_Service Service UUID
 CONST uint8_t TempServiceUUID[ATT_UUID_SIZE] =
@@ -528,4 +537,31 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
         }
     }
     return(status);
+}
+
+/*
+ * SUPSI Callback per Timer
+ */
+
+/* This Function simulates a temperature variation
+ * on a sinus 0.1Hz 20° offset and 5° Vpeak
+ * Updates temperature value in temp_tervice*/
+static int timer_delay = 0;
+extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t status) {
+    extern Timer_Handle    timerHandle[2];
+    uint8_t temperature=20;
+
+    int sampling_sec = MAX(ts_SampleVal[0], 1);
+    int period_count = (sampling_sec * 1000000 / TIMER0_CB_PERIOD);
+    if(timer_delay < period_count) {
+        // ritarda l'esecuzione fino al tempo di sampling
+        timer_delay++;
+        return;
+    }
+    timer_delay = 0;
+
+    int count = Timer_getCount(timerHandle[1]);
+    double sVal = 5.0 * sin(2 * PI * 0.1 * count / 1000);
+    temperature += (uint8_t)sVal;
+    TempService_SetParameter(TS_TEMP_ID, sizeof(temperature), &temperature);
 }

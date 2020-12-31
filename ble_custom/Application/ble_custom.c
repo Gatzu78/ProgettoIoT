@@ -82,7 +82,11 @@
 
 /* Application specific includes */
 #include <ti_drivers_config.h>
+
+/* SUPSI */
 #include <ti/drivers/Timer.h>
+#include <ti/drivers/PWM.h>
+
 #include <project_zero.h>
 #include "ti_ble_config.h"
 #include <util.h>
@@ -237,7 +241,12 @@ typedef struct
 /*********************************************************************
  * GLOBAL VARIABLES
  */
-extern Timer_Handle    handle[2];
+
+/*********************************************************************
+ *  EXTERNAL VARIABLES
+ */
+extern Timer_Handle timerHandle[2];
+
 // Task configuration
 Task_Struct pzTask;
 #if defined __TI_COMPILER_VERSION__
@@ -436,6 +445,14 @@ static char * util_getLocalNameStr(const uint8_t *advData, uint8_t len);
 extern void AssertHandler(uint8_t assertCause,
                           uint8_t assertSubcause);
 
+
+/*********************************************************************
+ * SUPSI Timer and PWM Initialization
+ */
+void TimerCfg(void);
+void PWMCfg(void);
+//void TempSimulatorCB(Timer_Handle handlecaller, int_fast16_t status);
+
 /*********************************************************************
  * PROFILE CALLBACKS
  */
@@ -498,6 +515,71 @@ static void project_zero_spin(void)
   {
     x++;
   }
+}
+
+/*********************************************************************
+ * SUPSI Timer and PWM Initialization
+ */
+void TimerCfg(){
+    Timer_init();
+
+    extern Timer_Handle    timerHandle[2];
+    Timer_Params    params[2];
+
+    Timer_Params_init(&params[0]);
+    params[0].periodUnits = Timer_PERIOD_US;
+    params[0].period = TIMER0_CB_PERIOD;
+    params[0].timerMode  = Timer_CONTINUOUS_CALLBACK;
+    params[0].timerCallback = TempService_SamplingCB;
+    timerHandle[0] = Timer_open(CONFIG_TIMER0, &params[0]);
+    if(!timerHandle[0])
+    {
+        Log_error1("Error initializing board TIMER_0, period = %d", params[0].period);
+        return Task_exit();
+    }
+    Timer_start(timerHandle[0]);
+
+    Timer_Params_init(&params[1]);
+    params[1].periodUnits = Timer_PERIOD_HZ;
+    params[1].period = 1000;
+    params[1].timerMode  = Timer_FREE_RUNNING;
+    timerHandle[1] = Timer_open(CONFIG_TIMER1, &params[1]);
+    if(!timerHandle[1])
+    {
+        Log_error1("Error initializing board TIMER_1, period = %d", params[1].period);
+        return Task_exit();
+    }
+    Timer_start(timerHandle[1]);
+
+    //sleep(10000);
+}
+
+void PWMCfg(){
+    // Import PWM Driver definitions
+    PWM_init();
+
+    PWM_Handle pwm;
+    PWM_Params pwmParams;
+    uint32_t   dutyValue;
+    // Initialize the PWM driver.
+    // Initialize the PWM parameters
+    PWM_Params_init(&pwmParams);
+    pwmParams.idleLevel = PWM_IDLE_LOW;      // Output low when PWM is not running
+    pwmParams.periodUnits = PWM_PERIOD_HZ;   // Period is in Hz
+    pwmParams.periodValue = 1;               // 1 Hz
+    pwmParams.dutyUnits = PWM_DUTY_FRACTION; // Duty is in fractional percentage
+    pwmParams.dutyValue = 0;                 // 0% initial duty cycle
+    // Open the PWM instance
+    pwm = PWM_open(CONFIG_PWM0, &pwmParams);
+    if(!pwm)
+    {
+        Log_error0("Error initializing board PWM");
+        return Task_exit();
+    }
+
+    PWM_start(pwm);                          // start PWM with 5% duty cycle
+    dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 5) / 100);
+    PWM_setDuty(pwm, dutyValue);  // set duty cycle to 5%
 }
 
 /*********************************************************************
@@ -669,6 +751,10 @@ static void ProjectZero_init(void)
 
     //Initialize GAP layer for Peripheral role and register to receive GAP events
     GAP_DeviceInit(GAP_PROFILE_PERIPHERAL, selfEntity, addrMode, &pRandomAddress);
+
+    // SUPSI Initialization
+    TimerCfg();
+    //PWMCfg();
 }
 
 /*********************************************************************
@@ -2069,7 +2155,8 @@ void ProjectZero_TempService_ValueChangeHandler(
         // -------------------------
         // Set the timer 0 interval based on the input value
 
-        //TODO MASSIMO: RIABILITARE Timer_setPeriod
+        // MASSIMO: invece di cambiare il periodo del timer
+        // calcolo all'interno della callback se ho raggiunto il sampling period
         //Timer_setPeriod(handle[0], Timer_PERIOD_US, 1000000*pCharData->data[0]);
         break;
 

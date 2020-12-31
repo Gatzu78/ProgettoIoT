@@ -25,6 +25,7 @@ extern "C"
  * INCLUDES
  */
 #include <bcomdef.h>
+#include <ti/drivers/Timer.h>
 
 /*********************************************************************
  * CONSTANTS
@@ -50,6 +51,11 @@ extern "C"
     0xB0, 0x00, 0x40, 0x51, 0x04, LO_UINT16(uuid), HI_UINT16(uuid), 0x00, 0xF0
 #define TS_SAMPLE_LEN                1
 #define TS_SAMPLE_LEN_MIN            1
+
+// SUPSI Timer0 period for temperature sampling
+// callback ogni 250 ms di default (oltre 300K fallisce)
+#define TIMER0_CB_PERIOD                      250000
+
 /*********************************************************************
  * TYPEDEFS
  */
@@ -75,6 +81,7 @@ typedef struct
 /*********************************************************************
  * API FUNCTIONS
  */
+extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t status);
 
 /*
  * TempService_AddService- Initializes the TempService service by registering
