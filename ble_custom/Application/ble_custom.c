@@ -566,7 +566,7 @@ void PWMCfg(){
     PWM_Params_init(&pwmParams);
     pwmParams.idleLevel = PWM_IDLE_LOW;      // Output low when PWM is not running
     pwmParams.periodUnits = PWM_PERIOD_HZ;   // Period is in Hz
-    pwmParams.periodValue = 1;               // 1 Hz
+    pwmParams.periodValue = 3;               // TODO: sotto i 3Hz fallisce (1 Hz)
     pwmParams.dutyUnits = PWM_DUTY_FRACTION; // Duty is in fractional percentage
     pwmParams.dutyValue = 0;                 // 0% initial duty cycle
     // Open the PWM instance
@@ -715,9 +715,10 @@ static void ProjectZero_init(void)
     DataService_SetParameter(DS_STRING_ID, sizeof(initString), initString);
     DataService_SetParameter(DS_STREAM_ID, DS_STREAM_LEN, initVal);
 
+    uint8_t samplingInitVal[1] = {2};
     // Initalization of characteristics in Temp_Service that can provide data.
     TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, initVal);
-    TempService_SetParameter(TS_SAMPLE_ID, TS_SAMPLE_LEN, initVal);
+    TempService_SetParameter(TS_SAMPLE_ID, TS_SAMPLE_LEN, samplingInitVal);
     // Start Bond Manager and register callback
     VOID GAPBondMgr_Register(&ProjectZero_BondMgrCBs);
 
@@ -754,7 +755,7 @@ static void ProjectZero_init(void)
 
     // SUPSI Initialization
     TimerCfg();
-    //PWMCfg();
+    PWMCfg();
 }
 
 /*********************************************************************

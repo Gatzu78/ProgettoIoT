@@ -53,7 +53,7 @@ extern "C"
 #define TS_SAMPLE_LEN_MIN            1
 
 // SUPSI Timer0 period for temperature sampling
-// callback ogni 250 ms di default (oltre 300K fallisce)
+// callback ogni 250 ms di default (TODO: oltre 300K fallisce)
 #define TIMER0_CB_PERIOD                      250000
 
 /*********************************************************************
