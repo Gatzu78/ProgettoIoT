@@ -73,6 +73,7 @@ CONST uint8_t ts_SampleUUID[ATT_UUID_SIZE] =
  */
 
 static TempServiceCBs_t *pAppCBs = NULL;
+static uint8_t ts_icall_rsp_task_id = INVALID_TASK_ID;
 
 /*********************************************************************
  * Profile Attributes - variables
@@ -213,6 +214,7 @@ extern bStatus_t TempService_AddService(uint8_t rspTaskId)
     Log_info2("Registered service, %d attributes, status 0x%02x",
               GATT_NUM_ATTRS(
                   Temp_ServiceAttrTbl), status);
+    ts_icall_rsp_task_id = rspTaskId;
     return(status);
 }
 
@@ -288,7 +290,7 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
         // Try to send notification.
         GATTServApp_ProcessCharCfg( temp_ValueConfig, (uint8_t *)&ts_TempVal, FALSE,
                                     Temp_ServiceAttrTbl, GATT_NUM_ATTRS( Temp_ServiceAttrTbl ),
-                                    INVALID_TASK_ID,  Temp_Service_ReadAttrCB);
+                                    ts_icall_rsp_task_id,  Temp_Service_ReadAttrCB);
     }
     else
     {

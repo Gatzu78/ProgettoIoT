@@ -147,9 +147,6 @@ public class BluetoothLeService extends Service {
                     mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
                     if(mSamplingCharacteristic == null) {
                         Log.e(TAG, "**** SAMPLING CHAR not found");
-                    } else {
-                        // GET CURRENT VALUE
-                        asyncReadSampling();
                     }
                 }
 
@@ -480,14 +477,14 @@ public class BluetoothLeService extends Service {
             return;
         }
         mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-                UUID_CLIENT_CHARACTERISTIC_CONFIG);
-        if(descriptor != null) {
-            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-            mBluetoothGatt.writeDescriptor(descriptor);
-        } else
-            Log.w(TAG, "**** SetCharNotification - No Client Descriptor for " +
-                    characteristic.getUuid());
+//        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+//                UUID_CLIENT_CHARACTERISTIC_CONFIG);
+//        if(descriptor != null) {
+//            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+//            mBluetoothGatt.writeDescriptor(descriptor);
+//        } else
+//            Log.w(TAG, "**** SetCharNotification - No Client Descriptor for " +
+//                    characteristic.getUuid());
     }
 
     /**
