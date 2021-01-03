@@ -128,7 +128,7 @@ static gattAttribute_t Temp_ServiceAttrTbl[] =
     // Temp Characteristic Value
     {
         { ATT_UUID_SIZE, ts_TempUUID },
-        GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
+        GATT_PERMIT_READ | GATT_PERMIT_WRITE,
         0,
         ts_TempVal
     },
@@ -198,7 +198,8 @@ extern bStatus_t TempService_AddService(uint8_t rspTaskId)
     uint8_t status;
 
     // Allocate Client Characteristic Configuration table
-    ts_TempValConfig = (gattCharCfg_t *)ICall_malloc( sizeof(gattCharCfg_t) * linkDBNumConns );
+    ts_TempValConfig = (gattCharCfg_t *)ICall_malloc(
+            sizeof(gattCharCfg_t) * linkDBNumConns );
     if ( ts_TempValConfig == NULL )
     {
         return ( bleMemAllocError );
@@ -213,8 +214,7 @@ extern bStatus_t TempService_AddService(uint8_t rspTaskId)
                                          GATT_MAX_ENCRYPT_KEY_SIZE,
                                          &Temp_ServiceCBs);
     Log_info2("Registered service, %d attributes, status 0x%02x",
-              GATT_NUM_ATTRS(
-                  Temp_ServiceAttrTbl), status);
+              GATT_NUM_ATTRS(Temp_ServiceAttrTbl), status);
     ts_icall_rsp_task_id = rspTaskId;
     return(status);
 }
@@ -609,7 +609,7 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
  * on a sinus 0.1Hz 20� offset and 5� Vpeak
  * Updates temperature value in temp_tervice*/
 static int timer_delay = 0;
-static uint8_t temperature;
+static uint8_t temperature[TS_TEMP_LEN] = {0};
 extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t status) {
     extern Timer_Handle    timerHandle[2];
 
@@ -624,6 +624,6 @@ extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t statu
 
     int count = Timer_getCount(timerHandle[1]);
     double sVal = 5.0 * sin(2 * PI * 0.1 * count / 1000);
-    temperature = 20 + (uint8_t)sVal;
-    TempService_SetParameter(TS_TEMP_ID, sizeof(temperature), &temperature);
+    temperature[0] = 20 + (uint8_t)sVal;
+    TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, temperature);
 }

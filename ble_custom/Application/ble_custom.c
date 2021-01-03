@@ -2100,7 +2100,7 @@ void ProjectZero_TempService_CfgChangeHandler(
     switch(pCharData->paramID)
     {
     case TS_TEMP_ID:
-        Log_info3("CCCD Change msg: %s : %s",
+        Log_info3("CCCD Change msg: %s %s: %s",
                   (uintptr_t)"Temp Service",
                   (uintptr_t)"Temp",
                   (uintptr_t)configValString);
@@ -2111,7 +2111,7 @@ void ProjectZero_TempService_CfgChangeHandler(
         break;
 
     case TS_SAMPLE_ID:
-        Log_info3("CCCD Change msg: %s : %s",
+        Log_info3("CCCD Change msg: %s %s: %s",
                   (uintptr_t)"Temp Service",
                   (uintptr_t)"Sample",
                   (uintptr_t)configValString);
@@ -2276,7 +2276,6 @@ static void ProjectZero_updateCharVal(pzCharacteristicData_t *pCharData)
 {
     switch(pCharData->svcUUID)
     {
-    //TODO MASSIMO: forse dovremmo aggiungere anche TEMP SERVICE
     case TEMP_SERVICE_SERV_UUID:
         TempService_SetParameter(pCharData->paramID, pCharData->dataLen,
                                 pCharData->data);

@@ -482,8 +482,8 @@ public class BluetoothLeService extends Service {
         if(!res)
             Log.e(TAG, "**** set char notification failed");
 
-        //if(UUID_TEMPERATURE_CHARACTERISTIC.equals(characteristic.getUuid())) {
-        if(UUID_BUTTON0_CHARACTERISTIC.equals(characteristic.getUuid())) {
+        if(UUID_TEMPERATURE_CHARACTERISTIC.equals(characteristic.getUuid())) {
+        //if(UUID_BUTTON0_CHARACTERISTIC.equals(characteristic.getUuid())) {
             // CCCD - Client Configuration Characteristic Descriptor
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID_CLIENT_CHARACTERISTIC_CONFIG);
