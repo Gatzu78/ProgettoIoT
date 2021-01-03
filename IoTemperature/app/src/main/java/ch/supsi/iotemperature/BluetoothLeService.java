@@ -125,14 +125,6 @@ public class BluetoothLeService extends Service {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 BluetoothGattService svc;
 
-                //TODO REMOVE
-                svc = mBluetoothGatt.getService(UUID_MI_BAND_BASIC_SERVICE);
-                if(svc != null) {
-                    mCurrentTimeChar = svc.getCharacteristic(UUID_CURRENT_TIME_CHAR);
-                    mCurrentTimeChar.setWriteType(WRITE_TYPE_DEFAULT);
-                    setCharacteristicNotification(mCurrentTimeChar, true);
-                }
-
                 // TEMPERATURE SERVICE
                 svc = mBluetoothGatt.getService(UUID_TEMPERATURE_SERVICE);
                 if(svc != null) {
@@ -476,15 +468,24 @@ public class BluetoothLeService extends Service {
             Log.w(TAG, "BluetoothAdapter not initialized");
             return;
         }
-        mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
-//        BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
-//                UUID_CLIENT_CHARACTERISTIC_CONFIG);
-//        if(descriptor != null) {
-//            descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
-//            mBluetoothGatt.writeDescriptor(descriptor);
-//        } else
-//            Log.w(TAG, "**** SetCharNotification - No Client Descriptor for " +
-//                    characteristic.getUuid());
+        boolean res = mBluetoothGatt.setCharacteristicNotification(characteristic, enabled);
+        if(!res)
+            Log.e(TAG, "**** set char notification failed");
+
+        if(UUID_TEMPERATURE_CHARACTERISTIC.equals(characteristic.getUuid())) {
+            // CCCD - Client Configuration Characteristic Descriptor
+            BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
+                    UUID_CLIENT_CHARACTERISTIC_CONFIG);
+            if (descriptor != null) {
+                descriptor.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                characteristic.setWriteType(WRITE_TYPE_DEFAULT);
+                res = mBluetoothGatt.writeDescriptor(descriptor);
+                if(!res)
+                    Log.e(TAG, "**** set descriptor failed");
+            } else
+                Log.w(TAG, "**** SetCharNotification - No Client Descriptor for " +
+                        characteristic.getUuid());
+        }
     }
 
     /**

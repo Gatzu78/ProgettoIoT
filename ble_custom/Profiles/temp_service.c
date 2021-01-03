@@ -84,13 +84,13 @@ static uint8_t ts_icall_rsp_task_id = INVALID_TASK_ID;
 static CONST gattAttrType_t TempServiceDecl = { ATT_UUID_SIZE, TempServiceUUID };
 
 // Characteristic "Temp" Properties (for declaration)
-static uint8_t ts_TempProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
+static uint8_t ts_TempProps = GATT_PROP_NOTIFY | GATT_PROP_READ;
 
 // Characteristic "Temp" Value variable
 static uint8_t ts_TempVal[TS_TEMP_LEN] = {0};
 
-// Characteristic "Data" CCCD
-static gattCharCfg_t *temp_ValueConfig;
+// Characteristic "Temp" CCCD - Client Configuration Characteristic Descriptor
+static gattCharCfg_t *ts_TempValConfig;
 
 // Length of data in characteristic "Temp" Value variable, initialized to minimal size.
 static uint16_t ts_TempValLen = TS_TEMP_LEN_MIN;
@@ -137,7 +137,7 @@ static gattAttribute_t Temp_ServiceAttrTbl[] =
       { ATT_BT_UUID_SIZE, clientCharCfgUUID },
       GATT_PERMIT_READ | GATT_PERMIT_WRITE,
       0,
-      (uint8 *)&temp_ValueConfig
+      (uint8 *)&ts_TempValConfig
     },
     // Sample Characteristic Declaration
     {
@@ -198,14 +198,14 @@ extern bStatus_t TempService_AddService(uint8_t rspTaskId)
     uint8_t status;
 
     // Allocate Client Characteristic Configuration table
-    temp_ValueConfig = (gattCharCfg_t *)ICall_malloc( sizeof(gattCharCfg_t) * linkDBNumConns );
-    if ( temp_ValueConfig == NULL )
+    ts_TempValConfig = (gattCharCfg_t *)ICall_malloc( sizeof(gattCharCfg_t) * linkDBNumConns );
+    if ( ts_TempValConfig == NULL )
     {
-      return ( bleMemAllocError );
+        return ( bleMemAllocError );
     }
 
     // Initialize Client Characteristic Configuration attributes
-    GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, temp_ValueConfig );
+    GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, ts_TempValConfig );
 
     // Register GATT attribute list and CBs with GATT Server App
     status = GATTServApp_RegisterService(Temp_ServiceAttrTbl,
@@ -258,6 +258,8 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
     uint16_t *pValLen;
     uint16_t valMinLen;
     uint16_t valMaxLen;
+    uint8_t sendNotiInd = FALSE;
+    gattCharCfg_t *attrConfig = NULL;
 
     switch(param)
     {
@@ -266,6 +268,8 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
         pValLen = &ts_TempValLen;
         valMinLen = TS_TEMP_LEN_MIN;
         valMaxLen = TS_TEMP_LEN;
+        sendNotiInd = TRUE;
+        attrConfig = ts_TempValConfig;
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Temp", len);
         break;
 
@@ -288,10 +292,17 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
         memcpy(pAttrVal, value, len);
         *pValLen = len; // Update length for read and get.
 
-        // Try to send notification.
-        GATTServApp_ProcessCharCfg( temp_ValueConfig, (uint8_t *)&ts_TempVal, FALSE,
+        if(sendNotiInd)
+        {
+            Log_info2("Trying to send noti/ind: connHandle %x, %s",
+                      attrConfig[0].connHandle,
+                      (uintptr_t)((attrConfig[0].value == 0) ? "\x1b[33mNoti/ind disabled\x1b[0m" :
+                      (attrConfig[0].value == 1) ? "Notification enabled" : "Indication enabled"));
+            // Try to send notification.
+            GATTServApp_ProcessCharCfg(attrConfig, pAttrVal, FALSE,
                                     Temp_ServiceAttrTbl, GATT_NUM_ATTRS( Temp_ServiceAttrTbl ),
                                     ts_icall_rsp_task_id,  Temp_Service_ReadAttrCB);
+        }
     }
     else
     {
@@ -479,32 +490,32 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
     uint16_t writeLenMax;
     uint16_t *pValueLenVar;
 
-    // See if request is regarding a Client Characterisic Configuration
-    if ( ! memcmp(pAttr->type.uuid, clientCharCfgUUID, pAttr->type.len) )
-    {
-      // Allow only notifications.
-      status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
-                                               offset, GATT_CLIENT_CFG_NOTIFY);
-
-      // Let the profile know that CCCD has been updated
-      if ( pAppCBs && pAppCBs->pfnCfgChangeCb )
-      {
-          pAppCBs->pfnCfgChangeCb(connHandle, TS_TEMP_ID,
-                                    len, pValue);
-      }
-
-
-    }
-    else
-    {
-      // If we get here, that means you've forgotten to add an if clause for a
-      // characteristic value attribute in the attribute table that has WRITE permissions.
-      status = ATT_ERR_ATTR_NOT_FOUND;
-    }
-
-
     // Find settings for the characteristic to be written.
     paramID = Temp_Service_findCharParamId(pAttr);
+
+    // See if request is regarding a Client Characterisic Configuration
+    if(ATT_BT_UUID_SIZE == pAttr->type.len && GATT_CLIENT_CHAR_CFG_UUID ==
+       *(uint16_t *)pAttr->type.uuid)
+    {
+        Log_info3("WriteAttrCB (CCCD): param: %d connHandle: %d %d",
+                  paramID,
+                  connHandle,
+                  method);
+
+      // Allow only notifications.
+      status = GATTServApp_ProcessCCCWriteReq(
+              connHandle, pAttr, pValue, len,
+              offset, GATT_CLIENT_CFG_NOTIFY);
+
+      // Let the profile know that CCCD has been updated
+      if (SUCCESS == status && pAppCBs && pAppCBs->pfnCfgChangeCb )
+      {
+          pAppCBs->pfnCfgChangeCb(connHandle, paramID, len, pValue);
+      }
+
+      return(status);
+    }
+
     switch(paramID)
     {
     case TS_TEMP_ID:
@@ -597,7 +608,7 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
  */
 
 /* This Function simulates a temperature variation
- * on a sinus 0.1Hz 20° offset and 5° Vpeak
+ * on a sinus 0.1Hz 20ï¿½ offset and 5ï¿½ Vpeak
  * Updates temperature value in temp_tervice*/
 static int timer_delay = 0;
 extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t status) {
