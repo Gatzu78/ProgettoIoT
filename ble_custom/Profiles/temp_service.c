@@ -87,6 +87,9 @@ static uint8_t ts_TempProps = GATT_PROP_READ | GATT_PROP_NOTIFY;
 // Characteristic "Temp" Value variable
 static uint8_t ts_TempVal[TS_TEMP_LEN] = {0};
 
+// Characteristic "Data" CCCD
+static gattCharCfg_t *temp_ValueConfig;
+
 // Length of data in characteristic "Temp" Value variable, initialized to minimal size.
 static uint16_t ts_TempValLen = TS_TEMP_LEN_MIN;
 
@@ -99,6 +102,7 @@ static uint8_t ts_SampleVal[TS_SAMPLE_LEN] = {2};
 
 // Length of data in characteristic "Sample" Value variable, initialized to minimal size.
 static uint16_t ts_SampleValLen = TS_SAMPLE_LEN_MIN;
+
 /*********************************************************************
  * Profile Attributes - Table
  */
@@ -125,6 +129,13 @@ static gattAttribute_t Temp_ServiceAttrTbl[] =
         GATT_PERMIT_READ | GATT_PERMIT_WRITE | GATT_PERMIT_WRITE,
         0,
         ts_TempVal
+    },
+    // Data CCCD
+    {
+      { ATT_BT_UUID_SIZE, clientCharCfgUUID },
+      GATT_PERMIT_READ | GATT_PERMIT_WRITE,
+      0,
+      (uint8 *)&temp_ValueConfig
     },
     // Sample Characteristic Declaration
     {
@@ -183,6 +194,16 @@ CONST gattServiceCBs_t Temp_ServiceCBs =
 extern bStatus_t TempService_AddService(uint8_t rspTaskId)
 {
     uint8_t status;
+
+    // Allocate Client Characteristic Configuration table
+    temp_ValueConfig = (gattCharCfg_t *)ICall_malloc( sizeof(gattCharCfg_t) * linkDBNumConns );
+    if ( temp_ValueConfig == NULL )
+    {
+      return ( bleMemAllocError );
+    }
+
+    // Initialize Client Characteristic Configuration attributes
+    GATTServApp_InitCharCfg( LINKDB_CONNHANDLE_INVALID, temp_ValueConfig );
 
     // Register GATT attribute list and CBs with GATT Server App
     status = GATTServApp_RegisterService(Temp_ServiceAttrTbl,
@@ -263,6 +284,11 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
     {
         memcpy(pAttrVal, value, len);
         *pValLen = len; // Update length for read and get.
+
+        // Try to send notification.
+        GATTServApp_ProcessCharCfg( temp_ValueConfig, (uint8_t *)&ts_TempVal, FALSE,
+                                    Temp_ServiceAttrTbl, GATT_NUM_ATTRS( Temp_ServiceAttrTbl ),
+                                    INVALID_TASK_ID,  Temp_Service_ReadAttrCB);
     }
     else
     {
