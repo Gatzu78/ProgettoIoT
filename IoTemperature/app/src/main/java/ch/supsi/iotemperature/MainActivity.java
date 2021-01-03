@@ -117,7 +117,7 @@ public class MainActivity extends AppCompatActivity {
     // ACTION_GATT_DISCONNECTED: disconnected from a GATT server.
     // ACTION_GATT_SERVICES_DISCOVERED: discovered GATT services.
     // ACTION_DATA_AVAILABLE: received data from the device. This can be a
-    // result of read or notification operations.
+    //                        result of read or notification operations.
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -150,11 +150,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void connect(String deviceAddress) {
         mBluetoothLeService.connect(deviceAddress);
-    }
-
-    //TODO REMOVE - MI BAND
-    public void asyncReadTime() {
-        mBluetoothLeService.asyncReadCurrentTime();
     }
 
     public void asyncReadTemperature() {

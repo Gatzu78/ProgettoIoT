@@ -259,7 +259,6 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
     uint16_t valMinLen;
     uint16_t valMaxLen;
     uint8_t sendNotiInd = FALSE;
-    gattCharCfg_t *attrConfig = NULL;
 
     switch(param)
     {
@@ -269,7 +268,6 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
         valMinLen = TS_TEMP_LEN_MIN;
         valMaxLen = TS_TEMP_LEN;
         sendNotiInd = TRUE;
-        attrConfig = ts_TempValConfig;
         Log_info2("SetParameter : %s len: %d", (uintptr_t)"Temp", len);
         break;
 
@@ -295,11 +293,11 @@ bStatus_t TempService_SetParameter(uint8_t param, uint16_t len, void *value)
         if(sendNotiInd)
         {
             Log_info2("Trying to send noti/ind: connHandle %x, %s",
-                      attrConfig[0].connHandle,
-                      (uintptr_t)((attrConfig[0].value == 0) ? "\x1b[33mNoti/ind disabled\x1b[0m" :
-                      (attrConfig[0].value == 1) ? "Notification enabled" : "Indication enabled"));
+                      ts_TempValConfig->connHandle,
+                      (uintptr_t)((ts_TempValConfig->value == 0) ? "\x1b[33mNoti/ind disabled\x1b[0m" :
+                      (ts_TempValConfig->value == 1) ? "Notification enabled" : "Indication enabled"));
             // Try to send notification.
-            GATTServApp_ProcessCharCfg(attrConfig, pAttrVal, FALSE,
+            GATTServApp_ProcessCharCfg(ts_TempValConfig, pAttrVal, FALSE,
                                     Temp_ServiceAttrTbl, GATT_NUM_ATTRS( Temp_ServiceAttrTbl ),
                                     ts_icall_rsp_task_id,  Temp_Service_ReadAttrCB);
         }
@@ -611,9 +609,9 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
  * on a sinus 0.1Hz 20� offset and 5� Vpeak
  * Updates temperature value in temp_tervice*/
 static int timer_delay = 0;
+static uint8_t temperature;
 extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t status) {
     extern Timer_Handle    timerHandle[2];
-    uint8_t temperature=20;
 
     int sampling_sec = MAX(ts_SampleVal[0], 1);
     int period_count = (sampling_sec * 1000000 / TIMER0_CB_PERIOD);
@@ -626,6 +624,6 @@ extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t statu
 
     int count = Timer_getCount(timerHandle[1]);
     double sVal = 5.0 * sin(2 * PI * 0.1 * count / 1000);
-    temperature += (uint8_t)sVal;
+    temperature = 20 + (uint8_t)sVal;
     TempService_SetParameter(TS_TEMP_ID, sizeof(temperature), &temperature);
 }

@@ -56,7 +56,8 @@ public class BluetoothLeService extends Service {
     private BluetoothGattCharacteristic mTemperatureCharacteristic;
     private BluetoothGattCharacteristic mLED1Characteristic;
     private BluetoothGattCharacteristic mSamplingCharacteristic;
-    private BluetoothGattCharacteristic mCurrentTimeChar;
+    private BluetoothGattCharacteristic mButton0Characteristic;
+    private BluetoothGattCharacteristic mButton1Characteristic;
 
     public static final int STATE_DISCONNECTED = 0;
     public static final int STATE_CONNECTING = 1;
@@ -77,13 +78,6 @@ public class BluetoothLeService extends Service {
     public final static String EXTRA_CHARACTERISTIC =
             "ch.supsi.iotemperature.EXTRA_CHARACTERISTIC";
 
-
-    // MI BAND SERVICE
-    public final static UUID UUID_MI_BAND_BASIC_SERVICE =
-            UUID.fromString(SUPSIGattAttributes.MI_BAND_BASIC_SERVICE);
-    public final static UUID UUID_CURRENT_TIME_CHAR =
-            UUID.fromString(SUPSIGattAttributes.CURRENT_TIME_CHAR);
-
     public final static UUID UUID_CLIENT_CHARACTERISTIC_CONFIG =
             UUID.fromString(SUPSIGattAttributes.CLIENT_CHARACTERISTIC_CONFIG);
 
@@ -95,10 +89,19 @@ public class BluetoothLeService extends Service {
             UUID.fromString(SUPSIGattAttributes.SAMPLING_CHARACTERISTIC);
     public final static UUID UUID_TEMPERATURE_CHARACTERISTIC =
             UUID.fromString(SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC);
+
     public final static UUID UUID_LED_SERVICE =
             UUID.fromString(SUPSIGattAttributes.LED_SERVICE);
     public final static UUID UUID_LED1_CHARACTERISTIC =
             UUID.fromString(SUPSIGattAttributes.LED1_CHARACTERISTIC);
+
+    public final static UUID UUID_BUTTON_SERVICE =
+            UUID.fromString(SUPSIGattAttributes.BUTTON_SERVICE);
+    public final static UUID UUID_BUTTON0_CHARACTERISTIC =
+            UUID.fromString(SUPSIGattAttributes.BUTTON0_CHARACTERISTIC);
+    public final static UUID UUID_BUTTON1_CHARACTERISTIC =
+            UUID.fromString(SUPSIGattAttributes.BUTTON1_CHARACTERISTIC);
+
 
     // Implements callback methods for GATT events that the app cares about.  For example,
     // connection change and services discovered.
@@ -138,6 +141,23 @@ public class BluetoothLeService extends Service {
 
                     mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
                     if(mSamplingCharacteristic == null) {
+                        Log.e(TAG, "**** SAMPLING CHAR not found");
+                    }
+                }
+
+                // BUTTON SERVICE
+                svc = mBluetoothGatt.getService(UUID_BUTTON_SERVICE);
+                if(svc != null) {
+                    mButton0Characteristic = svc.getCharacteristic(UUID_BUTTON0_CHARACTERISTIC);
+                    if(mButton0Characteristic == null) {
+                        Log.e(TAG, "**** BUTTON0 CHAR not found");
+                    } else {
+                        // ENABLE NOTIFICATION
+                        setCharacteristicNotification(mButton0Characteristic, true);
+                    }
+
+                    mButton1Characteristic = svc.getCharacteristic(UUID_BUTTON1_CHARACTERISTIC);
+                    if(mButton1Characteristic == null) {
                         Log.e(TAG, "**** SAMPLING CHAR not found");
                     }
                 }
@@ -201,11 +221,10 @@ public class BluetoothLeService extends Service {
 
         // TODO SUPSI: Choose the proper characteristic
         switch (characteristic.getUuid().toString()) {
-            // MI BAND - TODO REMOTE
-            case SUPSIGattAttributes.CURRENT_TIME_CHAR:
-                parseCurrentTimeCharacteristic(action, characteristic, intent, format, shift);
-                break;
             // SUPSI
+            case SUPSIGattAttributes.BUTTON0_CHARACTERISTIC:
+                parseButtonCharacteristic(action, characteristic, intent, format, shift);
+                break;
             case SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC:
                 parseTemperatureCharacteristic(action, characteristic, intent, format, shift);
                 break;
@@ -222,9 +241,16 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent);
     }
 
+    private void parseButtonCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
+        int buttonValue = characteristic.getIntValue(format, 0);
+        Log.d(TAG, String.format("*** CURRENT BUTTON [%s] Action [%s] Extra [%d]",
+                characteristic.getUuid(), action, buttonValue));
+        intent.putExtra(EXTRA_DATA, buttonValue);
+    }
+
     private void parseTemperatureCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
         int temperatureValue = characteristic.getIntValue(format, 0);
-        Log.d(TAG, String.format("*** CURRENT SAMPLING [%s] Action [%s] Extra [%d]",
+        Log.d(TAG, String.format("*** CURRENT TEMPERATURE [%s] Action [%s] Extra [%d]",
                 characteristic.getUuid(), action, temperatureValue));
         intent.putExtra(EXTRA_DATA, temperatureValue);
     }
@@ -241,18 +267,6 @@ public class BluetoothLeService extends Service {
         Log.d(TAG, String.format("*** CURRENT LED1 [%s] Action [%s] Extra [%d]",
                 characteristic.getUuid(), action, mLED1Value));
         intent.putExtra(EXTRA_DATA, mLED1Value);
-    }
-
-    private void parseCurrentTimeCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
-        final byte[] data = characteristic.getValue();
-        int yearLow = characteristic.getIntValue(format, 0);
-        int yearHi = characteristic.getIntValue(format, 1);
-        int year = (yearHi << shift) + yearLow;
-
-        LocalDateTime extra = LocalDateTime.of(year, data[2], data[3], data[4], data[5], data[6]);
-        Log.d(TAG, String.format("*** CURRENT TIME CHAR [%s] Action [%s] Extra [%s]",
-                characteristic.getUuid(), action, extra));
-        intent.putExtra(EXTRA_DATA, extra);
     }
 
     private void parseUnknownCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent) {
@@ -275,10 +289,6 @@ public class BluetoothLeService extends Service {
         return ((flag & 0x01) != 0) ?
                 BluetoothGattCharacteristic.FORMAT_UINT16 :
                 BluetoothGattCharacteristic.FORMAT_UINT8;
-    }
-
-    public void asyncReadCurrentTime() {
-        readCharacteristic(mCurrentTimeChar);
     }
 
     public void asyncReadSampling() {
@@ -472,7 +482,8 @@ public class BluetoothLeService extends Service {
         if(!res)
             Log.e(TAG, "**** set char notification failed");
 
-        if(UUID_TEMPERATURE_CHARACTERISTIC.equals(characteristic.getUuid())) {
+        //if(UUID_TEMPERATURE_CHARACTERISTIC.equals(characteristic.getUuid())) {
+        if(UUID_BUTTON0_CHARACTERISTIC.equals(characteristic.getUuid())) {
             // CCCD - Client Configuration Characteristic Descriptor
             BluetoothGattDescriptor descriptor = characteristic.getDescriptor(
                     UUID_CLIENT_CHARACTERISTIC_CONFIG);

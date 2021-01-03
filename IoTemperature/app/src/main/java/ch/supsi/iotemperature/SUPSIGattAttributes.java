@@ -18,13 +18,9 @@ public class SUPSIGattAttributes {
     public static final String TEMPERATURE_CHARACTERISTIC = "f0001141-0451-4000-b000-000000000000";
     public static final String SAMPLING_CHARACTERISTIC = "f0001142-0451-4000-b000-000000000000";
 
-    public static final String MI_BAND_BASIC_SERVICE = "0000fee0-0000-1000-8000-00805f9b34fb";
-    public static final String CURRENT_TIME_CHAR = "00002a2b-0000-1000-8000-00805f9b34fb";
-    public static final String DEVICE_NAME_CHAR = "00002a00-0000-1000-8000-00805f9b34fb";
-
-    public static final String HEART_RATE_SERVICE ="0000180d-0000-1000-8000-00805f9b34fb";
-    public static final String HEART_RATE_MEASUREMENT_CHAR = "00002a37-0000-1000-8000-00805f9b34fb";
-    public static final String HEART_RATE_CONTROLPOINT_CHAR = "00002a39-0000-1000-8000-00805f9b34fb";
+    public static final String BUTTON_SERVICE = "f0001120-0451-4000-b000-000000000000";
+    public static final String BUTTON0_CHARACTERISTIC = "f0001121-0451-4000-b000-000000000000";
+    public static final String BUTTON1_CHARACTERISTIC = "f0001121-0451-4000-b000-000000000000";
 
     static {
         // SUPSI BLE
@@ -32,19 +28,14 @@ public class SUPSIGattAttributes {
         attributes.put(LED0_CHARACTERISTIC, "LED0 Characteristic");
         attributes.put(LED1_CHARACTERISTIC, "LED1 Characteristic");
 
+        attributes.put(BUTTON_SERVICE, "BUTTON Service");
+        attributes.put(BUTTON0_CHARACTERISTIC, "BUTTON0 Characteristic");
+        attributes.put(BUTTON1_CHARACTERISTIC, "BUTTON1 Characteristic");
+
         attributes.put(TEMPERATURE_SERVICE, "TEMPERATURE Service");
         attributes.put(TEMPERATURE_CHARACTERISTIC, "TEMPERATURE Characteristic");
         attributes.put(SAMPLING_CHARACTERISTIC, "SAMPLING Characteristic");
 
-
-
-        // MI_BAND2_BASIC_SERVICE
-        attributes.put(MI_BAND_BASIC_SERVICE, "MI Band Basic Service");
-        attributes.put(CURRENT_TIME_CHAR, "Current Time Characteristic");
-        attributes.put(DEVICE_NAME_CHAR, "Device Name Characteristic");
-        attributes.put(HEART_RATE_SERVICE, "Heart Rate Service");
-        attributes.put(HEART_RATE_MEASUREMENT_CHAR, "Heart Rate Measurement Characteristic");
-        attributes.put(HEART_RATE_CONTROLPOINT_CHAR, "Heart Rate Control Point Characteristic");
 
         attributes.put("00001800-0000-1000-8000-00805f9b34fb", "Generic Access Service");
         attributes.put("00001801-0000-1000-8000-00805f9b34fb", "Generic Attribute Service");

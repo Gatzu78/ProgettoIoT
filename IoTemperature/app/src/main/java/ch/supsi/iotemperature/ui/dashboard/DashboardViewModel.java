@@ -102,9 +102,9 @@ public class DashboardViewModel extends ViewModel {
 
     private void processData(Intent intent) {
         switch (intent.getStringExtra(BluetoothLeService.EXTRA_CHARACTERISTIC)) {
-            case SUPSIGattAttributes.CURRENT_TIME_CHAR:
-                LocalDateTime time = (LocalDateTime)intent.getSerializableExtra(BluetoothLeService.EXTRA_DATA);
-                displayData(String.format("Time: %s", time));
+            case SUPSIGattAttributes.BUTTON0_CHARACTERISTIC:
+                int value = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
+                displayData(String.format("Button0: %d", value));
                 break;
             case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
                 int sampling = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
