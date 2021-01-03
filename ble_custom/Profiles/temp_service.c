@@ -74,6 +74,7 @@ CONST uint8_t ts_SampleUUID[ATT_UUID_SIZE] =
 
 static TempServiceCBs_t *pAppCBs = NULL;
 
+
 /*********************************************************************
  * Profile Attributes - variables
  */
@@ -475,6 +476,30 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
     uint16_t writeLenMin;
     uint16_t writeLenMax;
     uint16_t *pValueLenVar;
+
+    // See if request is regarding a Client Characterisic Configuration
+    if ( ! memcmp(pAttr->type.uuid, clientCharCfgUUID, pAttr->type.len) )
+    {
+      // Allow only notifications.
+      status = GATTServApp_ProcessCCCWriteReq( connHandle, pAttr, pValue, len,
+                                               offset, GATT_CLIENT_CFG_NOTIFY);
+
+      // Let the profile know that CCCD has been updated
+      if ( pAppCBs && pAppCBs->pfnCfgChangeCb )
+      {
+          pAppCBs->pfnCfgChangeCb(connHandle, TS_TEMP_ID,
+                                    len, pValue);
+      }
+
+
+    }
+    else
+    {
+      // If we get here, that means you've forgotten to add an if clause for a
+      // characteristic value attribute in the attribute table that has WRITE permissions.
+      status = ATT_ERR_ATTR_NOT_FOUND;
+    }
+
 
     // Find settings for the characteristic to be written.
     paramID = Temp_Service_findCharParamId(pAttr);
