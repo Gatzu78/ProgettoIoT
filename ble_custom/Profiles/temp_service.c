@@ -30,9 +30,6 @@
 /*********************************************************************
  * MACROS
  */
-#ifndef PI
-#define PI 3.14159265
-#endif
 
 /*********************************************************************
  *  EXTERNAL VARIABLES
@@ -49,7 +46,6 @@
 /*********************************************************************
  * GLOBAL VARIABLES
  */
-Timer_Handle timerHandle[2];
 
 // Temp_Service Service UUID
 CONST uint8_t TempServiceUUID[ATT_UUID_SIZE] =
@@ -100,7 +96,8 @@ static uint8_t ts_SampleProps = GATT_PROP_READ | GATT_PROP_WRITE |
                               GATT_PROP_WRITE_NO_RSP;
 
 // Characteristic "Sample" Value variable
-static uint8_t ts_SampleVal[TS_SAMPLE_LEN] = {2};
+// SUPSI TODO check se ci sono problemi con ts_SampleVal pubblico
+/*static*/ uint8_t ts_SampleVal[TS_SAMPLE_LEN] = {0};
 
 // Length of data in characteristic "Sample" Value variable, initialized to minimal size.
 static uint16_t ts_SampleValLen = TS_SAMPLE_LEN_MIN;
@@ -599,31 +596,4 @@ static bStatus_t Temp_Service_WriteAttrCB(uint16_t connHandle,
         }
     }
     return(status);
-}
-
-/*
- * SUPSI Callback per Timer
- */
-
-/* This Function simulates a temperature variation
- * on a sinus 0.1Hz 20� offset and 5� Vpeak
- * Updates temperature value in temp_tervice*/
-static int timer_delay = 0;
-static uint8_t temperature[TS_TEMP_LEN] = {0};
-extern void TempService_SamplingCB(Timer_Handle handlecaller, int_fast16_t status) {
-    extern Timer_Handle    timerHandle[2];
-
-    int sampling_sec = MAX(ts_SampleVal[0], 1);
-    int period_count = (sampling_sec * 1000000 / TIMER0_CB_PERIOD);
-    if(timer_delay < period_count) {
-        // ritarda l'esecuzione fino al tempo di sampling
-        timer_delay++;
-        return;
-    }
-    timer_delay = 0;
-
-    int count = Timer_getCount(timerHandle[1]);
-    double sVal = 5.0 * sin(2 * PI * 0.1 * count / 1000);
-    temperature[0] = 20 + (uint8_t)sVal;
-    TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, temperature);
 }

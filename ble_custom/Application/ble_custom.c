@@ -90,7 +90,7 @@
 #include <project_zero.h>
 #include "ti_ble_config.h"
 #include <util.h>
-
+#include "math.h"
 
 /*********************************************************************
  * MACROS
@@ -105,6 +105,10 @@
 /*********************************************************************
  * CONSTANTS
  */
+#ifndef PI
+#define PI 3.14159265
+#endif
+
 // Task configuration
 #define PZ_TASK_PRIORITY                     1
 
@@ -133,6 +137,10 @@
 #define PZ_SEND_PARAM_UPD_EVT    8  /* Request parameter update req be sent        */
 #define PZ_CONN_EVT              9  /* Connection Event End notice                 */
 #define PZ_READ_RPA_EVT         10  /* Read RPA event                              */
+
+// SUPSI
+#define PZ_READ_TEMP_EVT        11  /* Read TEMP event                             */
+#define CLK_READ_PERIOD_MS                    1000
 
 // Supervision timeout conversion rate to miliseconds
 #define CONN_TIMEOUT_MS_CONVERSION            10
@@ -241,11 +249,12 @@ typedef struct
 /*********************************************************************
  * GLOBAL VARIABLES
  */
+// SUPSI
+static Timer_Handle timerHandle[2];
 
 /*********************************************************************
  *  EXTERNAL VARIABLES
  */
-extern Timer_Handle timerHandle[2];
 
 // Task configuration
 Task_Struct pzTask;
@@ -321,6 +330,9 @@ static Clock_Handle button1DebounceClockHandle;
 
 // Clock instance for RPA read events.
 static Clock_Struct clkRpaRead;
+
+// SUPSI
+static Clock_Struct clkTempRead;
 
 // State of the buttons
 static uint8_t button0State = 0;
@@ -449,8 +461,10 @@ extern void AssertHandler(uint8_t assertCause,
 /*********************************************************************
  * SUPSI Timer and PWM Initialization
  */
-void TimerCfg(void);
-void PWMCfg(void);
+static void TimerCfg(void);
+static void PWMCfg(void);
+static bStatus_t ProjectZero_readTemperature(void);
+
 //void TempSimulatorCB(Timer_Handle handlecaller, int_fast16_t status);
 
 /*********************************************************************
@@ -523,9 +537,9 @@ static void project_zero_spin(void)
 void TimerCfg(){
     Timer_init();
 
-    extern Timer_Handle    timerHandle[2];
     Timer_Params    params[2];
 
+    /* TODO REMOVE Vecchio meccanismo di update temperatura
     Timer_Params_init(&params[0]);
     params[0].periodUnits = Timer_PERIOD_US;
     params[0].period = TIMER0_CB_PERIOD;
@@ -536,8 +550,8 @@ void TimerCfg(){
     {
         Log_error1("Error initializing board TIMER_0, period = %d", params[0].period);
         return Task_exit();
-    }
-    Timer_start(timerHandle[0]);
+    }*/
+    //Timer_start(timerHandle[0]);
 
     Timer_Params_init(&params[1]);
     params[1].periodUnits = Timer_PERIOD_HZ;
@@ -756,6 +770,10 @@ static void ProjectZero_init(void)
     // SUPSI Initialization
     TimerCfg();
     PWMCfg();
+
+    // SUPSI inizializzazione callback lettura temperatura
+    Util_constructClock(&clkTempRead, ProjectZero_clockHandler,
+                        CLK_READ_PERIOD_MS, 0, true, PZ_READ_TEMP_EVT);
 }
 
 /*********************************************************************
@@ -1027,6 +1045,14 @@ static void ProjectZero_processApplicationMessage(pzMsg_t *pMsg)
         }
         break;
       }
+
+      // SUPSI
+      case PZ_READ_TEMP_EVT:
+      {
+        ProjectZero_readTemperature();
+        break;
+      }
+
       default:
         break;
     }
@@ -1493,6 +1519,16 @@ void ProjectZero_clockHandler(UArg arg)
       Util_startClock(&clkRpaRead);
       // Let the application handle the event
       ProjectZero_enqueueMsg(PZ_READ_RPA_EVT, NULL);
+      break;
+    }
+
+    // SUPSI
+    case PZ_READ_TEMP_EVT:
+    {
+      // Restart timer
+      Util_startClock(&clkTempRead);
+      // Let the application handle the event
+      ProjectZero_enqueueMsg(PZ_READ_TEMP_EVT, NULL);
       break;
     }
 
@@ -2156,9 +2192,8 @@ void ProjectZero_TempService_ValueChangeHandler(
         // -------------------------
         // Set the timer 0 interval based on the input value
 
-        // MASSIMO: invece di cambiare il periodo del timer
+        // SUPSI: invece di cambiare il periodo del timer
         // calcolo all'interno della callback se ho raggiunto il sampling period
-        //Timer_setPeriod(handle[0], Timer_PERIOD_US, 1000000*pCharData->data[0]);
         break;
 
 
@@ -2394,6 +2429,37 @@ static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
         }
     }
     ;
+}
+
+// SUPSI
+static bStatus_t ProjectZero_readTemperature(void)
+{
+  extern uint8_t ts_SampleVal[TS_SAMPLE_LEN];
+  static int timer_delay = 1;
+
+  int sampling_ms = MAX(ts_SampleVal[0], 1) * 1000;
+  int period_count = (sampling_ms / CLK_READ_PERIOD_MS);
+  if(timer_delay < period_count) {
+      // ritarda l'esecuzione fino al tempo di sampling
+      timer_delay++;
+      return SUCCESS;
+  }
+  timer_delay = 1;
+
+  // simula temperatura tra 15 e 25 gradi
+  int count = Timer_getCount(timerHandle[1]);
+  double sVal = 5.0 * sin(2 * PI * 0.1 * count / 1000);
+  uint8_t temperature =  20 + (uint8_t)sVal;
+
+  // Set profile value (and notify if notifications are enabled)
+  bStatus_t status = TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, &temperature);
+
+  if (status != SUCCESS)
+  {
+    Log_error1("Setting temperature parameter filed with status 0x%x", status);
+  }
+
+  return SUCCESS;
 }
 
 /*********************************************************************
