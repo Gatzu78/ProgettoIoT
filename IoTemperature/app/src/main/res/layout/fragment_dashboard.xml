@@ -1,67 +1,62 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".ui.dashboard.DashboardFragment"
     android:orientation="vertical">
 
-
     <LinearLayout
         android:orientation="horizontal"
-        android:layout_margin="8dp"
+        android:layout_marginHorizontal="8dp"
+        android:showDividers="middle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
+
         <TextView
             android:id="@+id/device_name"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAlignment="center"
+            android:textSize="20sp"
             tools:text="device_name" />
+        <Space
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1" />
+        <Button
+            android:id="@+id/btnConnect"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/connect" />
+
+    </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
+        android:layout_marginHorizontal="8dp"
+        android:showDividers="middle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
         <TextView
             android:id="@+id/device_address"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAlignment="center"
             android:textSize="14sp"
-            android:layout_weight="1"
             tools:text="@string/device_address" />
-        <Button
-            android:id="@+id/btnConnect"
+        <Space
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/connect" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:orientation="horizontal"
-        android:layout_margin="8dp"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+            android:layout_weight="1" />
         <androidx.appcompat.widget.SwitchCompat
             android:id="@+id/ledSwitch"
             android:layout_width="103dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="@string/led" />
-
-        <Button
-            android:layout_marginEnd="8dp"
-            android:id="@+id/btnRefreshData"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/temperature" />
-
-        <androidx.appcompat.widget.AppCompatImageButton
-            android:layout_margin="8dp"
-            android:id="@+id/btnSampling"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@android:drawable/ic_menu_preferences"
-             />
     </LinearLayout>
+
     <com.github.mikephil.charting.charts.BarChart
         android:id="@+id/chart"
         android:layout_width="match_parent"

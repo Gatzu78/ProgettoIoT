@@ -14,9 +14,12 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 import androidx.navigation.ui.AppBarConfiguration;
@@ -55,19 +58,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
 
         checkBluetooth();
         registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
-
-        BottomNavigationView navView = findViewById(R.id.nav_view);
-        // Passing each menu ID as a set of Ids because each
-        // menu should be considered as top level destinations.
-        AppBarConfiguration appBarConfiguration = new AppBarConfiguration.Builder(
-                R.id.navigation_home, R.id.navigation_dashboard)
-                .build();
-        NavController navController = Navigation.findNavController(this, R.id.nav_host_fragment);
-        NavigationUI.setupActionBarWithNavController(this, navController, appBarConfiguration);
-        NavigationUI.setupWithNavController(navView, navController);
     }
 
     private void checkBluetooth() {
@@ -96,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
     private final ServiceConnection mServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
+            Log.i(TAG, "**** BLE Service connected");
             mBluetoothLeService = ((BluetoothLeService.LocalBinder) service).getService();
             if (!mBluetoothLeService.initialize()) {
                 Log.e(TAG, "Unable to initialize Bluetooth");
@@ -142,14 +138,15 @@ public class MainActivity extends AppCompatActivity {
                 boolean canRead = (charaProp & BluetoothGattCharacteristic.PROPERTY_READ) > 0;
                 boolean canWrite = (charaProp & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
                 boolean canNotify = (charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0;
-                Log.d(TAG, String.format("**** Characteristics\t R=%s W=%s N=%s \t[%s]",
-                        canRead, canWrite, canNotify,
-                        SUPSIGattAttributes.lookup(uuid.toString(), uuid.toString())));
+//                Log.d(TAG, String.format("**** Characteristics\t R=%s W=%s N=%s \t[%s]",
+//                        canRead, canWrite, canNotify,
+//                        SUPSIGattAttributes.lookup(uuid.toString(), uuid.toString())));
             }
         }
     }
 
     public void connect(String deviceAddress) {
+        mBluetoothLeService.initialize();
         mBluetoothLeService.connect(deviceAddress);
     }
 
@@ -177,4 +174,7 @@ public class MainActivity extends AppCompatActivity {
         return intentFilter;
     }
 
+    public void disconnect() {
+        mBluetoothLeService.disconnect();
+    }
 }

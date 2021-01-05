@@ -10,7 +10,6 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,8 +20,8 @@ public class DashboardViewModel extends ViewModel {
     private final static String TAG = DashboardViewModel.class.getSimpleName();
     private static final int NUM_OF_TEMP_VALUES = 10;
 
-    private MutableLiveData<String> mDeviceAddress;
-    private MutableLiveData<String> mDeviceName;
+    private final MutableLiveData<String> mDeviceAddress;
+    private final MutableLiveData<String> mDeviceName;
     private final MutableLiveData<Integer> mConnectionStatus;
     private final MutableLiveData<Boolean> mLED1On;
     private final MutableLiveData<List<String>> mLog;
@@ -60,7 +59,11 @@ public class DashboardViewModel extends ViewModel {
         return mDeviceAddress;
     }
 
+    public void unregisterReceiver(Context context) {
+        context.unregisterReceiver(mGattUpdateReceiver);
+    }
     public void registerReceiver(Context context) {
+        Log.i(TAG, "**** registerReceiver");
         context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
     }
 

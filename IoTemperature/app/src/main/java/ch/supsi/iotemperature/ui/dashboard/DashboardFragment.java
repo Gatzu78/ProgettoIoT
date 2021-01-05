@@ -8,31 +8,29 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.NumberPicker;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.widget.SwitchCompat;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.navigation.fragment.NavHostFragment;
 
 import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.components.AxisBase;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
 import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
 
 import java.text.DecimalFormat;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import ch.supsi.iotemperature.BluetoothLeService;
 import ch.supsi.iotemperature.MainActivity;
@@ -43,10 +41,40 @@ public class DashboardFragment extends Fragment {
     private final static String TAG = DashboardFragment.class.getSimpleName();
 
     private DashboardViewModel dashboardViewModel;
-    private BLEDataAdapter bleDataAdapter;
+    private LogDataAdapter logDataAdapter;
     private String mDeviceAddress;
     private String mDeviceName;
 
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        MainActivity mainActivity = (MainActivity) getActivity();
+        ActionBar actionBar = mainActivity.getSupportActionBar();
+        actionBar.setDisplayHomeAsUpEnabled(true);
+        actionBar.setDisplayShowHomeEnabled(true);
+
+        Toolbar toolbar = mainActivity.findViewById(R.id.toolbar);
+        toolbar.inflateMenu(R.menu.menu_main);
+        toolbar.getMenu().findItem(R.id.action_sampling).setOnMenuItemClickListener(i -> {
+            showSamplingDialog(mainActivity);
+            return true;
+        });
+        toolbar.getMenu().findItem(R.id.action_led).setOnMenuItemClickListener(i -> {
+            mainActivity.toggleLED1();
+            return true;
+        });
+        toolbar.getMenu().findItem(R.id.action_refresh).setOnMenuItemClickListener(i -> {
+            mainActivity.asyncReadTemperature();
+            return true;
+        });
+
+        toolbar.setNavigationOnClickListener(v -> {
+            // back button pressed
+            NavHostFragment.findNavController(DashboardFragment.this)
+                    .navigate(R.id.action_DashboardFragment_to_HomeFragment);
+        });
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -67,23 +95,11 @@ public class DashboardFragment extends Fragment {
         dashboardViewModel.getDeviceAddress().observe(getViewLifecycleOwner(),
                 deviceAddress::setText);
 
-        // REFRESH DATA BUTTON
-        final Button btnRefreshData = root.findViewById(R.id.btnRefreshData);
-        btnRefreshData.setOnClickListener(view -> {
-            mainActivity.asyncReadTemperature();
-        });
-
         // LED BUTTON
         final SwitchCompat ledSwitch = root.findViewById(R.id.ledSwitch);
-        ledSwitch.setOnClickListener(view -> Objects.requireNonNull(mainActivity).toggleLED1());
+        ledSwitch.setOnClickListener(view -> mainActivity.toggleLED1());
 
         dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), ledSwitch::setChecked);
-
-        // SAMPLING
-        final ImageButton btnSampling = root.findViewById(R.id.btnSampling);
-        btnSampling.setOnClickListener(view -> {
-            showSamplingDialog(mainActivity);
-        });
 
         final Button btnConnect = root.findViewById(R.id.btnConnect);
         btnConnect.setOnClickListener(view -> {
@@ -95,8 +111,6 @@ public class DashboardFragment extends Fragment {
             btnConnect.setText(status == BluetoothLeService.STATE_CONNECTED ? "CONNECTED" :
                     status == BluetoothLeService.STATE_CONNECTING ? "CONNECTING" : "CONNECT");
             ledSwitch.setEnabled(status == BluetoothLeService.STATE_CONNECTED);
-            btnSampling.setEnabled(status == BluetoothLeService.STATE_CONNECTED);
-            btnRefreshData.setEnabled(status == BluetoothLeService.STATE_CONNECTED);
             btnConnect.setEnabled(status == BluetoothLeService.STATE_DISCONNECTED);
         });
 
@@ -104,10 +118,10 @@ public class DashboardFragment extends Fragment {
         final ListView dataListView = root.findViewById(R.id.listViewBLEData);
         dashboardViewModel.getLog().observe(getViewLifecycleOwner(), itemList -> {
             if(itemList != null) {
-                bleDataAdapter = new BLEDataAdapter(this.getContext(), itemList);
-                dataListView.setAdapter(bleDataAdapter);
+                logDataAdapter = new LogDataAdapter(this.getContext(), itemList);
+                dataListView.setAdapter(logDataAdapter);
             }
-            bleDataAdapter.notifyDataSetChanged();
+            logDataAdapter.notifyDataSetChanged();
         });
 
         // CHART
@@ -217,12 +231,6 @@ public class DashboardFragment extends Fragment {
     }
 
     @Override
-    public void onDestroyView() {
-        Log.i(TAG, "**** onDestroyView");
-        super.onDestroyView();
-    }
-
-    @Override
     public void onPause() {
         Log.i(TAG, "**** onPause");
         super.onPause();
@@ -231,13 +239,31 @@ public class DashboardFragment extends Fragment {
     @Override
     public void onStop() {
         Log.i(TAG, "**** onStop");
+        MainActivity mainActivity = (MainActivity) getActivity();
+        mainActivity.disconnect();
         super.onStop();
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.i(TAG, "**** onDestroy");
+        super.onDestroy();
+    }
+
+    @Override
+    public void onDestroyView() {
+        Log.i(TAG, "**** onDestroyView");
+        dashboardViewModel.unregisterReceiver(getContext());
+        super.onDestroyView();
     }
 
     @Override
     public void onResume() {
         Log.i(TAG, "**** onResume");
         super.onResume();
+
+        MainActivity mainActivity = (MainActivity) getActivity();
+        mainActivity.connect(mDeviceAddress);
     }
 
     @Override

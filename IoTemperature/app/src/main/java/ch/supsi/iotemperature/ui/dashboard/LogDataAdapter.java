@@ -11,9 +11,9 @@ import java.util.List;
 
 import ch.supsi.iotemperature.R;
 
-public class BLEDataAdapter extends ArrayAdapter<String> {
+public class LogDataAdapter extends ArrayAdapter<String> {
 
-    public BLEDataAdapter(Context context, List<String> itemList) {
+    public LogDataAdapter(Context context, List<String> itemList) {
         super(context, 0, itemList);
     }
 

@@ -10,6 +10,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
@@ -26,6 +27,15 @@ public class HomeFragment extends Fragment {
 
     private HomeViewModel homeViewModel;
     private DeviceListAdapter deviceListAdapter;
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        MainActivity mainActivity = (MainActivity) getActivity();
+        mainActivity.getSupportActionBar().setDisplayHomeAsUpEnabled(false);
+        mainActivity.getSupportActionBar().setDisplayShowHomeEnabled(false);
+        mainActivity.invalidateOptionsMenu();
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -51,9 +61,6 @@ public class HomeFragment extends Fragment {
         // DEVICE SELECTED
         deviceListView.setOnItemClickListener((parent, view, position, id) -> {
             BluetoothDevice device = (BluetoothDevice)deviceListView.getItemAtPosition(position);
-
-            MainActivity main = (MainActivity) getActivity();
-            main.connect(device.getAddress());
 
             NavController navController = Navigation.findNavController(getActivity(), R.id.nav_host_fragment);
             Bundle bundle = new Bundle();
