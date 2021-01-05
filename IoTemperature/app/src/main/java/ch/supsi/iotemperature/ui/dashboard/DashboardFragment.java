@@ -231,26 +231,6 @@ public class DashboardFragment extends Fragment {
     }
 
     @Override
-    public void onPause() {
-        Log.i(TAG, "**** onPause");
-        super.onPause();
-    }
-
-    @Override
-    public void onStop() {
-        Log.i(TAG, "**** onStop");
-        MainActivity mainActivity = (MainActivity) getActivity();
-        mainActivity.disconnect();
-        super.onStop();
-    }
-
-    @Override
-    public void onDestroy() {
-        Log.i(TAG, "**** onDestroy");
-        super.onDestroy();
-    }
-
-    @Override
     public void onDestroyView() {
         Log.i(TAG, "**** onDestroyView");
         dashboardViewModel.unregisterReceiver(getContext());

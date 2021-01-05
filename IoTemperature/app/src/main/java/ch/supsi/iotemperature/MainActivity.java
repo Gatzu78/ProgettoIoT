@@ -50,8 +50,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onStop() {
         super.onStop();
-        unbindService(mServiceConnection);
-        mServiceBound = false;
+        if(mServiceBound) {
+            unbindService(mServiceConnection);
+            mServiceBound = false;
+        }
     }
 
     @Override
@@ -117,36 +119,18 @@ public class MainActivity extends AppCompatActivity {
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            final String action = intent.getAction();
-            if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-                checkGattServices(mBluetoothLeService.getSupportedGattServices());
-                asyncReadLED1();
-            }
+        final String action = intent.getAction();
+        if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
+            asyncReadLED1();
+        }
         }
     };
 
-    private void checkGattServices(List<BluetoothGattService> gattServices) {
-        if (gattServices == null)
-            return;
-
-        for (BluetoothGattService gattService : gattServices) {
-            List<BluetoothGattCharacteristic> gattCharacteristics = gattService.getCharacteristics();
-            for (BluetoothGattCharacteristic characteristic : gattCharacteristics) {
-                UUID uuid = characteristic.getUuid();
-
-                final int charaProp = characteristic.getProperties();
-                boolean canRead = (charaProp & BluetoothGattCharacteristic.PROPERTY_READ) > 0;
-                boolean canWrite = (charaProp & BluetoothGattCharacteristic.PROPERTY_WRITE) > 0;
-                boolean canNotify = (charaProp & BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0;
-//                Log.d(TAG, String.format("**** Characteristics\t R=%s W=%s N=%s \t[%s]",
-//                        canRead, canWrite, canNotify,
-//                        SUPSIGattAttributes.lookup(uuid.toString(), uuid.toString())));
-            }
-        }
+    public void disconnect() {
+        mBluetoothLeService.close();
     }
 
     public void connect(String deviceAddress) {
-        mBluetoothLeService.initialize();
         mBluetoothLeService.connect(deviceAddress);
     }
 
@@ -172,9 +156,5 @@ public class MainActivity extends AppCompatActivity {
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED);
         return intentFilter;
-    }
-
-    public void disconnect() {
-        mBluetoothLeService.disconnect();
     }
 }

@@ -59,25 +59,31 @@ public class DashboardViewModel extends ViewModel {
         return mDeviceAddress;
     }
 
-    public void unregisterReceiver(Context context) {
-        context.unregisterReceiver(mGattUpdateReceiver);
-    }
-    public void registerReceiver(Context context) {
-        Log.i(TAG, "**** registerReceiver");
-        context.registerReceiver(mGattUpdateReceiver, makeGattUpdateIntentFilter());
+    public void setSampling(int value) {
+        if(mSamplingValue.getValue() != value)
+            mSamplingValue.setValue(value);
     }
 
-    private static IntentFilter makeGattUpdateIntentFilter() {
+    public void setDeviceName(String deviceName) {
+        mDeviceName.setValue(deviceName);
+    }
+
+    public void setDeviceAddress(String deviceAddress) {
+        mDeviceAddress.setValue(deviceAddress);
+    }
+
+    public void registerReceiver(Context context) {
+        Log.i(TAG, "**** registerReceiver");
         final IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_CONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_GATT_DISCONNECTED);
         intentFilter.addAction(BluetoothLeService.ACTION_DATA_AVAILABLE);
-        return intentFilter;
+        context.registerReceiver(mGattUpdateReceiver, intentFilter);
     }
 
-    private void displayData(String data) {
-        mLog.getValue().add(0, data);
-        mLog.setValue(mLog.getValue());
+    public void unregisterReceiver(Context context) {
+        Log.i(TAG, "**** unregisterReceiver");
+        context.unregisterReceiver(mGattUpdateReceiver);
     }
 
     // Handles various events fired by the Service.
@@ -89,19 +95,24 @@ public class DashboardViewModel extends ViewModel {
     private final BroadcastReceiver mGattUpdateReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-        final String action = intent.getAction();
+            final String action = intent.getAction();
 
-        if (BluetoothLeService.ACTION_GATT_CONNECTING.equals(action)) {
-            mConnectionStatus.setValue(BluetoothLeService.STATE_CONNECTING);
-        } else if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
-            mConnectionStatus.setValue(BluetoothLeService.STATE_CONNECTED);
-        } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
-            mConnectionStatus.setValue(BluetoothLeService.STATE_DISCONNECTED);
-        } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
-            processData(intent);
-        }
+            if (BluetoothLeService.ACTION_GATT_CONNECTING.equals(action)) {
+                mConnectionStatus.setValue(BluetoothLeService.STATE_CONNECTING);
+            } else if (BluetoothLeService.ACTION_GATT_CONNECTED.equals(action)) {
+                mConnectionStatus.setValue(BluetoothLeService.STATE_CONNECTED);
+            } else if (BluetoothLeService.ACTION_GATT_DISCONNECTED.equals(action)) {
+                mConnectionStatus.setValue(BluetoothLeService.STATE_DISCONNECTED);
+            } else if (BluetoothLeService.ACTION_DATA_AVAILABLE.equals(action)) {
+                processData(intent);
+            }
         }
     };
+
+    private void displayData(String data) {
+        mLog.getValue().add(0, data);
+        mLog.setValue(mLog.getValue());
+    }
 
     private void processData(Intent intent) {
         switch (intent.getStringExtra(BluetoothLeService.EXTRA_CHARACTERISTIC)) {
@@ -137,18 +148,5 @@ public class DashboardViewModel extends ViewModel {
         while (values.size() > NUM_OF_TEMP_VALUES)
             values.remove(0);
         mTemperatures.setValue(values);
-    }
-
-    public void setSampling(int value) {
-        if(mSamplingValue.getValue() != value)
-            mSamplingValue.setValue(value);
-    }
-
-    public void setDeviceName(String deviceName) {
-        mDeviceName.setValue(deviceName);
-    }
-
-    public void setDeviceAddress(String deviceAddress) {
-        mDeviceAddress.setValue(deviceAddress);
     }
 }
