@@ -124,6 +124,7 @@ public class MainActivity extends AppCompatActivity {
             final String action = intent.getAction();
             if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
                 checkGattServices(mBluetoothLeService.getSupportedGattServices());
+                asyncReadLED1();
             }
         }
     };

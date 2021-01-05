@@ -19,7 +19,7 @@ import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardViewModel extends ViewModel {
     private final static String TAG = DashboardViewModel.class.getSimpleName();
-    private static final int NUM_OF_TEMP_VALUES = 20;
+    private static final int NUM_OF_TEMP_VALUES = 10;
 
     private MutableLiveData<String> mDeviceAddress;
     private MutableLiveData<String> mDeviceName;

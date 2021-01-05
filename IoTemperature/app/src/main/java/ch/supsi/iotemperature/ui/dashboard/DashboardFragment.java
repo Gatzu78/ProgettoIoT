@@ -82,7 +82,7 @@ public class DashboardFragment extends Fragment {
         // SAMPLING
         final ImageButton btnSampling = root.findViewById(R.id.btnSampling);
         btnSampling.setOnClickListener(view -> {
-            showSamplingDialog();
+            showSamplingDialog(mainActivity);
         });
 
         final Button btnConnect = root.findViewById(R.id.btnConnect);
@@ -100,7 +100,6 @@ public class DashboardFragment extends Fragment {
             btnConnect.setEnabled(status == BluetoothLeService.STATE_DISCONNECTED);
         });
 
-
         // LOG
         final ListView dataListView = root.findViewById(R.id.listViewBLEData);
         dashboardViewModel.getLog().observe(getViewLifecycleOwner(), itemList -> {
@@ -113,6 +112,17 @@ public class DashboardFragment extends Fragment {
 
         // CHART
         final BarChart chart = root.findViewById(R.id.chart);
+        setChartSettings(chart);
+        dashboardViewModel.getTemperatures().observe(getViewLifecycleOwner(), temperatures -> {
+            BarData data = transformData(temperatures);
+            chart.setData(data);
+            chart.invalidate();
+        });
+
+        return root;
+    }
+
+    private void setChartSettings(BarChart chart) {
         chart.getDescription().setEnabled(false);
         chart.setDrawGridBackground(false);
         // Set Y Axis boundaries
@@ -129,14 +139,6 @@ public class DashboardFragment extends Fragment {
         chart.getAxisRight().setEnabled(false);
         // Hide X Axis
         chart.getXAxis().setEnabled(false);
-
-        dashboardViewModel.getTemperatures().observe(getViewLifecycleOwner(), temperatures -> {
-            BarData data = transformData(temperatures);
-            chart.setData(data);
-            chart.invalidate();
-        });
-
-        return root;
     }
 
     private BarData transformData(List<Integer> itemList) {
@@ -152,21 +154,23 @@ public class DashboardFragment extends Fragment {
         return new BarData(dataSets);
     }
 
-    private void showSamplingDialog() {
+    private void showSamplingDialog(MainActivity mainActivity) {
+        mainActivity.asyncReadSampling();
         final Dialog dialog = new Dialog(getContext());
         dialog.setContentView(R.layout.sampling_dialog);
 
         final NumberPicker np = dialog.findViewById(R.id.numSampling);
-        Integer value = dashboardViewModel.getSamplingValue().getValue();
-        if(value != null)
-            np.setValue(value);
+        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
+            if(value != null)
+                np.setValue(value);
+        });
+
         np.setMaxValue(1000);
         np.setMinValue(1);
         np.setWrapSelectorWheel(false);
 
         Button btnConfirm =  dialog.findViewById(R.id.btnConfirm);
         btnConfirm.setOnClickListener(view -> {
-            MainActivity mainActivity = (MainActivity) getActivity();
             mainActivity.writeSampling(np.getValue());
             dashboardViewModel.setSampling(np.getValue());
             dialog.dismiss();
