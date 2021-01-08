@@ -75,6 +75,7 @@ public class DashboardFragment extends Fragment {
         });
 
         toolbar.setNavigationOnClickListener(v -> {
+            mainActivity.disconnect();
             // back button pressed
             NavHostFragment.findNavController(DashboardFragment.this)
                     .navigate(R.id.action_DashboardFragment_to_HomeFragment);
@@ -168,8 +169,8 @@ public class DashboardFragment extends Fragment {
         chart.getDescription().setEnabled(false);
         chart.setDrawGridBackground(false);
         // Set Y Axis boundaries
-        chart.getAxisLeft().setAxisMaximum(30);
-        chart.getAxisLeft().setAxisMinimum(0);
+        chart.getAxisLeft().setAxisMaximum(26);
+        chart.getAxisLeft().setAxisMinimum(14);
         chart.getAxisLeft().setValueFormatter(new ValueFormatter() {
             private final DecimalFormat mFormat= new DecimalFormat("0.0");
             @Override
@@ -221,7 +222,7 @@ public class DashboardFragment extends Fragment {
                 np.setValue(value);
         });
 
-        np.setMaxValue(10000);
+        np.setMaxValue(5000);
         np.setMinValue(100);
         np.setWrapSelectorWheel(false);
 
