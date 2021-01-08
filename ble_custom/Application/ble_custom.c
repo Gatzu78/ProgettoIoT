@@ -140,7 +140,7 @@
 
 // SUPSI
 #define PZ_READ_TEMP_EVT        11  /* Read TEMP event                             */
-#define CLK_READ_PERIOD_MS                    1000
+#define CLK_READ_PERIOD_MS                    100
 
 // Supervision timeout conversion rate to miliseconds
 #define CONN_TIMEOUT_MS_CONVERSION            10
@@ -250,7 +250,7 @@ typedef struct
  * GLOBAL VARIABLES
  */
 // SUPSI
-static Timer_Handle timerHandle[2];
+static Timer_Handle timerHandle;
 
 /*********************************************************************
  *  EXTERNAL VARIABLES
@@ -351,7 +351,7 @@ static uint8 rpaAddr[B_ADDR_LEN] = {0};
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-
+void LED0_ToggleCB(Timer_Handle handlecaller, int_fast16_t status);
 /* Task functions */
 static void ProjectZero_init(void);
 static void ProjectZero_taskFxn(UArg a0,
@@ -462,7 +462,6 @@ extern void AssertHandler(uint8_t assertCause,
  * SUPSI Timer and PWM Initialization
  */
 static void TimerCfg(void);
-static void PWMCfg(void);
 static bStatus_t ProjectZero_readTemperature(void);
 
 //void TempSimulatorCB(Timer_Handle handlecaller, int_fast16_t status);
@@ -537,65 +536,41 @@ static void project_zero_spin(void)
 void TimerCfg(){
     Timer_init();
 
-    Timer_Params    params[2];
+    Timer_Params    params;
 
-    /* TODO REMOVE Vecchio meccanismo di update temperatura
-    Timer_Params_init(&params[0]);
-    params[0].periodUnits = Timer_PERIOD_US;
-    params[0].period = TIMER0_CB_PERIOD;
-    params[0].timerMode  = Timer_CONTINUOUS_CALLBACK;
-    params[0].timerCallback = TempService_SamplingCB;
-    timerHandle[0] = Timer_open(CONFIG_TIMER0, &params[0]);
-    if(!timerHandle[0])
+    /*Timer per PWM LED*/
+    Timer_Params_init(&params);
+    params.periodUnits = Timer_PERIOD_US;
+    params.period = 950000;
+    params.timerMode  = Timer_CONTINUOUS_CALLBACK;
+    params.timerCallback = LED0_ToggleCB;
+    timerHandle= Timer_open(CONFIG_TIMER0, &params);
+    if(!timerHandle)
     {
-        Log_error1("Error initializing board TIMER_0, period = %d", params[0].period);
-        return Task_exit();
-    }*/
-    //Timer_start(timerHandle[0]);
-
-    Timer_Params_init(&params[1]);
-    params[1].periodUnits = Timer_PERIOD_HZ;
-    params[1].period = 1000;
-    params[1].timerMode  = Timer_FREE_RUNNING;
-    timerHandle[1] = Timer_open(CONFIG_TIMER1, &params[1]);
-    if(!timerHandle[1])
-    {
-        Log_error1("Error initializing board TIMER_1, period = %d", params[1].period);
+        Log_error1("Error initializing board TIMER_0, period = %d", params.period);
         return Task_exit();
     }
-    Timer_start(timerHandle[1]);
+    Timer_start(timerHandle);
 
-    //sleep(10000);
 }
 
-void PWMCfg(){
-    // Import PWM Driver definitions
-    PWM_init();
 
-    PWM_Handle pwm;
-    PWM_Params pwmParams;
-    uint32_t   dutyValue;
-    // Initialize the PWM driver.
-    // Initialize the PWM parameters
-    PWM_Params_init(&pwmParams);
-    pwmParams.idleLevel = PWM_IDLE_LOW;      // Output low when PWM is not running
-    pwmParams.periodUnits = PWM_PERIOD_HZ;   // Period is in Hz
-    pwmParams.periodValue = 3;               // TODO: sotto i 3Hz fallisce (1 Hz)
-    pwmParams.dutyUnits = PWM_DUTY_FRACTION; // Duty is in fractional percentage
-    pwmParams.dutyValue = 0;                 // 0% initial duty cycle
-    // Open the PWM instance
-    pwm = PWM_open(CONFIG_PWM0, &pwmParams);
-    if(!pwm)
-    {
-        Log_error0("Error initializing board PWM");
-        return Task_exit();
+void LED0_ToggleCB(Timer_Handle handlecaller, int_fast16_t status){
+
+    //PIN_open();
+    //PIN_setOutputEnable(ledPinHandle, CONFIG_PIN_RLED, 0);
+
+    if(PIN_getOutputValue(CONFIG_PIN_RLED)==0) {
+        PIN_setOutputValue(ledPinHandle, CONFIG_PIN_RLED, 1);
+
+        Timer_setPeriod (timerHandle, Timer_PERIOD_US , 50000);       //setta time 50 ms
+    }
+    else {
+        PIN_setOutputValue(ledPinHandle, CONFIG_PIN_RLED, 0);
+        Timer_setPeriod (timerHandle, Timer_PERIOD_US , 950000);       //setta time 950 ms
     }
 
-    PWM_start(pwm);                          // start PWM with 5% duty cycle
-    dutyValue = (uint32_t) (((uint64_t) PWM_DUTY_FRACTION_MAX * 5) / 100);
-    PWM_setDuty(pwm, dutyValue);  // set duty cycle to 5%
 }
-
 /*********************************************************************
  * @fn      ProjectZero_createTask
  *
@@ -767,9 +742,10 @@ static void ProjectZero_init(void)
     //Initialize GAP layer for Peripheral role and register to receive GAP events
     GAP_DeviceInit(GAP_PROFILE_PERIPHERAL, selfEntity, addrMode, &pRandomAddress);
 
+
     // SUPSI Initialization
     TimerCfg();
-    PWMCfg();
+    //PWMCfg();
 
     // SUPSI inizializzazione callback lettura temperatura
     Util_constructClock(&clkTempRead, ProjectZero_clockHandler,
@@ -1527,6 +1503,7 @@ void ProjectZero_clockHandler(UArg arg)
     {
       // Restart timer
       Util_startClock(&clkTempRead);
+
       // Let the application handle the event
       ProjectZero_enqueueMsg(PZ_READ_TEMP_EVT, NULL);
       break;
@@ -2192,8 +2169,7 @@ void ProjectZero_TempService_ValueChangeHandler(
         // -------------------------
         // Set the timer 0 interval based on the input value
 
-        // SUPSI: invece di cambiare il periodo del timer
-        // calcolo all'interno della callback se ho raggiunto il sampling period
+        Util_restartClock(&clkTempRead, pCharData->data[0]);
         break;
 
 
@@ -2434,22 +2410,24 @@ static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
 // SUPSI
 static bStatus_t ProjectZero_readTemperature(void)
 {
-  extern uint8_t ts_SampleVal[TS_SAMPLE_LEN];
-  static int timer_delay = 1;
-
-  int sampling_ms = MAX(ts_SampleVal[0], 1) * 1000;
-  int period_count = (sampling_ms / CLK_READ_PERIOD_MS);
-  if(timer_delay < period_count) {
-      // ritarda l'esecuzione fino al tempo di sampling
-      timer_delay++;
-      return SUCCESS;
-  }
-  timer_delay = 1;
+//  extern uint8_t ts_SampleVal[TS_SAMPLE_LEN];
+//  static int timer_delay = 1;
+//
+//  int sampling_ms = MAX(ts_SampleVal[0], 1) * CLK_READ_PERIOD_MS;
+//  int period_count = (sampling_ms / CLK_READ_PERIOD_MS);
+//  if(timer_delay < period_count) {
+//      // ritarda l'esecuzione fino al tempo di sampling
+//      timer_delay++;
+//      return SUCCESS;
+//  }
+//  timer_delay = 1;
+//
+  float s = ((float)Clock_getTicks()/10000.0);
 
   // simula temperatura tra 15 e 25 gradi
-  int count = Timer_getCount(timerHandle[1]);
-  double sVal = 5.0 * sin(2 * PI * 0.1 * count / 1000);
-  uint8_t temperature =  20 + (uint8_t)sVal;
+  //int count = Timer_getCount(timerHandle[1]);
+  float sVal = 5.0 * sin(2 * PI * s);
+  float temperature =  20 + sVal;
 
   // Set profile value (and notify if notifications are enabled)
   bStatus_t status = TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, &temperature);
