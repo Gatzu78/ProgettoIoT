@@ -261,7 +261,8 @@ public class BluetoothLeService extends Service {
     }
 
     private void parseTemperatureCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
-        int temperatureValue = characteristic.getIntValue(format, 0);
+        final byte[] data = characteristic.getValue();
+        float temperatureValue = characteristic.getFloatValue(format, 0);
 //        Log.v(TAG, String.format("*** CURRENT TEMPERATURE [%s] Action [%s] Extra [%d]",
 //                characteristic.getUuid(), action, temperatureValue));
         intent.putExtra(EXTRA_DATA, temperatureValue);

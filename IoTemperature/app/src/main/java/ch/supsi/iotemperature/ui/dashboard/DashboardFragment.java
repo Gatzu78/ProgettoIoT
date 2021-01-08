@@ -22,11 +22,16 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.BarData;
 import com.github.mikephil.charting.data.BarDataSet;
 import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.Entry;
+import com.github.mikephil.charting.data.LineData;
+import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -125,17 +130,21 @@ public class DashboardFragment extends Fragment {
         });
 
         // CHART
-        final BarChart chart = root.findViewById(R.id.chart);
+        // Sostituito con LineChart
+        //final BarChart chart = root.findViewById(R.id.chart);
+        final LineChart chart = root.findViewById(R.id.chart);
         setChartSettings(chart);
         dashboardViewModel.getTemperatures().observe(getViewLifecycleOwner(), temperatures -> {
-            BarData data = transformData(temperatures);
+            //BarData data = transformData(temperatures);
+            LineData data = transformData(temperatures);
             chart.setData(data);
             chart.invalidate();
         });
 
         return root;
     }
-
+    //Sostituita da LineChart
+    /*
     private void setChartSettings(BarChart chart) {
         chart.getDescription().setEnabled(false);
         chart.setDrawGridBackground(false);
@@ -154,7 +163,27 @@ public class DashboardFragment extends Fragment {
         // Hide X Axis
         chart.getXAxis().setEnabled(false);
     }
-
+    */
+    private void setChartSettings(LineChart chart) {
+        chart.getDescription().setEnabled(false);
+        chart.setDrawGridBackground(false);
+        // Set Y Axis boundaries
+        chart.getAxisLeft().setAxisMaximum(30);
+        chart.getAxisLeft().setAxisMinimum(0);
+        chart.getAxisLeft().setValueFormatter(new ValueFormatter() {
+            private final DecimalFormat mFormat= new DecimalFormat("0.0");
+            @Override
+            public String getFormattedValue(float value) {
+                return mFormat.format(value);
+            }
+        });
+        // Hide Right Axis
+        chart.getAxisRight().setEnabled(false);
+        // Hide X Axis
+        chart.getXAxis().setEnabled(false);
+    }
+    //Sostituita da transformLineData
+    /*
     private BarData transformData(List<Integer> itemList) {
         ArrayList<BarEntry> data = new ArrayList<>();
         for (int i=0; i<itemList.size(); i++)
@@ -166,6 +195,19 @@ public class DashboardFragment extends Fragment {
         ArrayList<IBarDataSet> dataSets = new ArrayList<>();
         dataSets.add(dataSet);
         return new BarData(dataSets);
+    }*/
+
+    private LineData transformData(List<Float> itemList){
+        ArrayList<Entry> data = new ArrayList<>();
+        for (int i=0; i<itemList.size(); i++)
+            data.add(new Entry(i, itemList.get(i)));
+
+        LineDataSet dataSet = new LineDataSet(data, "Temperature");
+        dataSet.setColor(Color.BLUE);
+
+        ArrayList<ILineDataSet> dataSets = new ArrayList<>();
+        dataSets.add(dataSet);
+        return new LineData(dataSets);
     }
 
     private void showSamplingDialog(MainActivity mainActivity) {
@@ -179,8 +221,8 @@ public class DashboardFragment extends Fragment {
                 np.setValue(value);
         });
 
-        np.setMaxValue(1000);
-        np.setMinValue(1);
+        np.setMaxValue(10000);
+        np.setMinValue(100);
         np.setWrapSelectorWheel(false);
 
         Button btnConfirm =  dialog.findViewById(R.id.btnConfirm);

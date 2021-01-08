@@ -17,8 +17,6 @@ import androidx.navigation.NavController;
 import androidx.navigation.Navigation;
 
 import java.util.ArrayList;
-import java.util.stream.Collectors;
-
 import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;

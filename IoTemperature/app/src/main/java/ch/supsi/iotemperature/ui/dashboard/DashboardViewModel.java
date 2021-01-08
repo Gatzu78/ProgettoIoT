@@ -26,7 +26,8 @@ public class DashboardViewModel extends ViewModel {
     private final MutableLiveData<Boolean> mLED1On;
     private final MutableLiveData<List<String>> mLog;
     private final MutableLiveData<Integer> mSamplingValue;
-    private final MutableLiveData<List<Integer>> mTemperatures;
+    //private final MutableLiveData<List<Integer>> mTemperatures;
+    private final MutableLiveData<List<Float>> mTemperatures;
 
     public DashboardViewModel() {
         Log.i(TAG, "**** NEW DashboardViewModel");
@@ -41,7 +42,8 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public LiveData<List<String>> getLog() { return mLog; }
-    public LiveData<List<Integer>> getTemperatures() { return mTemperatures; }
+    //public LiveData<List<Integer>> getTemperatures() { return mTemperatures; }
+    public LiveData<List<Float>> getTemperatures() { return mTemperatures; }
 
     public LiveData<Integer> getSamplingValue() {
         return mSamplingValue;
@@ -131,9 +133,9 @@ public class DashboardViewModel extends ViewModel {
                 displayData(String.format("LED1: %d", led1Status));
                 break;
             case SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC:
-                Integer temperature = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
+                Float temperature = intent.getFloatExtra(BluetoothLeService.EXTRA_DATA, 0);
                 updateTemperatureCollection(temperature);
-                displayData(String.format("Temperature: %d", temperature));
+                displayData(String.format("Temperature: %f", temperature));
                 break;
             default:
                 String extra = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
@@ -142,8 +144,8 @@ public class DashboardViewModel extends ViewModel {
         }
     }
 
-    private void updateTemperatureCollection(int temperature) {
-        List<Integer> values = mTemperatures.getValue();
+    private void updateTemperatureCollection(float temperature) {
+        List<Float> values = mTemperatures.getValue();
         values.add(temperature);
         while (values.size() > NUM_OF_TEMP_VALUES)
             values.remove(0);
