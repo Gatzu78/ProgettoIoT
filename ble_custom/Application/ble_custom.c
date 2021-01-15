@@ -704,7 +704,7 @@ static void ProjectZero_init(void)
     DataService_SetParameter(DS_STRING_ID, sizeof(initString), initString);
     DataService_SetParameter(DS_STREAM_ID, DS_STREAM_LEN, initVal);
 
-    uint8_t samplingInitVal[1] = {2};
+    uint8_t samplingInitVal[1] = {100};
     // Initalization of characteristics in Temp_Service that can provide data.
     TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, initVal);
     TempService_SetParameter(TS_SAMPLE_ID, TS_SAMPLE_LEN, samplingInitVal);
@@ -2168,8 +2168,11 @@ void ProjectZero_TempService_ValueChangeHandler(
         // Do something useful with pCharData->data here
         // -------------------------
         // Set the timer 0 interval based on the input value
+        uint16_t myval = pCharData->data[1] << 8 | pCharData->data[0];
 
-        Util_restartClock(&clkTempRead, pCharData->data[0]);
+        Util_stopClock(&clkTempRead);
+        Util_restartClock(&clkTempRead, myval);
+        Util_startClock(&clkTempRead);
         break;
 
 
@@ -2411,7 +2414,7 @@ static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
 static bStatus_t ProjectZero_readTemperature(void)
 {
 
-  float s = ((float)Clock_getTicks()/1000.0);
+  float s = ((float)Clock_getTicks()/10000.0);
 
   // simula temperatura tra 15 e 25 gradi
   float sVal = 5.0 * sin(2 * PI * s * 0.1);

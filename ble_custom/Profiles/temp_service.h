@@ -49,8 +49,8 @@ extern "C"
 #define TS_SAMPLE_UUID               0x1142
 #define TS_SAMPLE_UUID_BASE128(uuid) 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, \
     0xB0, 0x00, 0x40, 0x51, 0x04, LO_UINT16(uuid), HI_UINT16(uuid), 0x00, 0xF0
-#define TS_SAMPLE_LEN                1
-#define TS_SAMPLE_LEN_MIN            1
+#define TS_SAMPLE_LEN                2
+#define TS_SAMPLE_LEN_MIN            2
 
 // SUPSI Timer0 period for temperature sampling
 // callback ogni 250 ms di default (TODO: oltre 300K fallisce)
