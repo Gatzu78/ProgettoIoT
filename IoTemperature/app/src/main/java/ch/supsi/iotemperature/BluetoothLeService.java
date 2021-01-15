@@ -31,6 +31,8 @@ import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.UUID;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -261,8 +263,9 @@ public class BluetoothLeService extends Service {
     }
 
     private void parseTemperatureCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
-        int temperatureValue = characteristic.getIntValue(format, 0);
-//        Log.v(TAG, String.format("*** CURRENT TEMPERATURE [%s] Action [%s] Extra [%d]",
+        final byte[] data = characteristic.getValue();
+        Float temperatureValue = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
+//        Log.v(TAG, String.format("*** CURRENT TEMPERATURE [%s] Action [%s] Extra [%f]",
 //                characteristic.getUuid(), action, temperatureValue));
         intent.putExtra(EXTRA_DATA, temperatureValue);
     }
