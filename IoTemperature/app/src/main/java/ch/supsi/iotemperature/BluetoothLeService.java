@@ -202,17 +202,17 @@ public class BluetoothLeService extends Service {
         if(svc == null) {
             Log.e(TAG, "### TEMPERATURE_SERVICE is null");
         } else {
+            mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
+            if(mSamplingCharacteristic == null) {
+                Log.e(TAG, "*** SAMPLING CHARACTERISTIC not found");
+            }
+
             mTemperatureCharacteristic = svc.getCharacteristic(UUID_TEMPERATURE_CHARACTERISTIC);
             if(mTemperatureCharacteristic == null) {
                 Log.e(TAG, "*** TEMP CHARACTERISTIC not found");
             } else {
                 // ENABLE NOTIFICATION
                 setCharacteristicNotification(mTemperatureCharacteristic, true);
-            }
-
-            mSamplingCharacteristic = svc.getCharacteristic(UUID_SAMPLING_CHARACTERISTIC);
-            if(mSamplingCharacteristic == null) {
-                Log.e(TAG, "*** SAMPLING CHARACTERISTIC not found");
             }
         }
 
@@ -312,7 +312,7 @@ public class BluetoothLeService extends Service {
 
     public void writeSampling(int value) {
         if(mSamplingCharacteristic != null) {
-            mSamplingCharacteristic.setValue(value, BluetoothGattCharacteristic.FORMAT_UINT8, 0);
+            mSamplingCharacteristic.setValue(value, BluetoothGattCharacteristic.FORMAT_UINT16, 0);
             writeCharacteristic(mSamplingCharacteristic);
         } else {
             Log.e(TAG, "*** Sampling Characteristic is null");

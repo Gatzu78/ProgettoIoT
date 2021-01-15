@@ -121,7 +121,8 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
         final String action = intent.getAction();
         if (BluetoothLeService.ACTION_GATT_SERVICES_DISCOVERED.equals(action)) {
-            asyncReadLED1();
+            //asyncReadLED1();
+            asyncReadSampling();
         }
         }
     };

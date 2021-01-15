@@ -97,7 +97,7 @@ static uint8_t ts_SampleProps = GATT_PROP_READ | GATT_PROP_WRITE |
 
 // Characteristic "Sample" Value variable
 // SUPSI TODO check se ci sono problemi con ts_SampleVal pubblico
-/*static*/ uint16_t ts_SampleVal[TS_SAMPLE_LEN] = {0};
+/*static*/ uint8_t ts_SampleVal[TS_SAMPLE_LEN] = {0};
 
 // Length of data in characteristic "Sample" Value variable, initialized to minimal size.
 static uint16_t ts_SampleValLen = TS_SAMPLE_LEN_MIN;

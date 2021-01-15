@@ -144,27 +144,7 @@ public class DashboardFragment extends Fragment {
 
         return root;
     }
-    //Sostituita da LineChart
-    /*
-    private void setChartSettings(BarChart chart) {
-        chart.getDescription().setEnabled(false);
-        chart.setDrawGridBackground(false);
-        // Set Y Axis boundaries
-        chart.getAxisLeft().setAxisMaximum(30);
-        chart.getAxisLeft().setAxisMinimum(0);
-        chart.getAxisLeft().setValueFormatter(new ValueFormatter() {
-            private final DecimalFormat mFormat= new DecimalFormat("0.0");
-            @Override
-            public String getFormattedValue(float value) {
-                return mFormat.format(value);
-            }
-        });
-        // Hide Right Axis
-        chart.getAxisRight().setEnabled(false);
-        // Hide X Axis
-        chart.getXAxis().setEnabled(false);
-    }
-    */
+
     private void setChartSettings(LineChart chart) {
         chart.getDescription().setEnabled(false);
         chart.setDrawGridBackground(false);
@@ -183,20 +163,6 @@ public class DashboardFragment extends Fragment {
         // Hide X Axis
         chart.getXAxis().setEnabled(false);
     }
-    //Sostituita da transformLineData
-    /*
-    private BarData transformData(List<Integer> itemList) {
-        ArrayList<BarEntry> data = new ArrayList<>();
-        for (int i=0; i<itemList.size(); i++)
-            data.add(new BarEntry(i, itemList.get(i)));
-
-        BarDataSet dataSet = new BarDataSet(data, "Temperature");
-        dataSet.setColor(Color.BLUE);
-
-        ArrayList<IBarDataSet> dataSets = new ArrayList<>();
-        dataSets.add(dataSet);
-        return new BarData(dataSets);
-    }*/
 
     private LineData transformData(List<Float> itemList){
         ArrayList<Entry> data = new ArrayList<>();
@@ -211,6 +177,15 @@ public class DashboardFragment extends Fragment {
         return new LineData(dataSets);
     }
 
+    public String[] getArrayWithSteps (int iMinValue, int iMaxValue, int iStep)
+    {
+        int iStepsArray = (iMaxValue-iMinValue) / iStep+1; //get the lenght array that will return
+        String[] arrayValues= new String[iStepsArray]; //Create array with length of iStepsArray
+        for(int i = 0; i < iStepsArray; i++)
+            arrayValues[i] = String.valueOf(iMinValue + (i * iStep));
+        return arrayValues;
+    }
+
     private void showSamplingDialog(MainActivity mainActivity) {
         mainActivity.asyncReadSampling();
         final Dialog dialog = new Dialog(getContext());
@@ -221,15 +196,18 @@ public class DashboardFragment extends Fragment {
             if(value != null)
                 np.setValue(value);
         });
-
-        np.setMaxValue(5000);
-        np.setMinValue(100);
-        np.setWrapSelectorWheel(false);
+        int minValue = 100;
+        int step = 10;
+        String[] values = getArrayWithSteps(minValue, 1000, step);
+        np.setDisplayedValues(values);
+        np.setMinValue(1);
+        np.setMaxValue(values.length);
 
         Button btnConfirm =  dialog.findViewById(R.id.btnConfirm);
         btnConfirm.setOnClickListener(view -> {
-            mainActivity.writeSampling(np.getValue());
-            dashboardViewModel.setSampling(np.getValue());
+            int value = minValue + (np.getValue() * step);
+            mainActivity.writeSampling(value);
+            dashboardViewModel.setSampling(value);
             dialog.dismiss();
         });
 

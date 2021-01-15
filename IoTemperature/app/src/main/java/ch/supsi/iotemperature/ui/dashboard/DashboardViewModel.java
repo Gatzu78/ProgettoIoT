@@ -18,7 +18,7 @@ import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardViewModel extends ViewModel {
     private final static String TAG = DashboardViewModel.class.getSimpleName();
-    private static final int NUM_OF_TEMP_VALUES = 10;
+    private static final int SAMPLING_WINDOW = 10000;
 
     private final MutableLiveData<String> mDeviceAddress;
     private final MutableLiveData<String> mDeviceName;
@@ -37,7 +37,7 @@ public class DashboardViewModel extends ViewModel {
         mConnectionStatus = new MutableLiveData<>(BluetoothLeService.STATE_CONNECTING);
         mDeviceAddress = new MutableLiveData<>("-");
         mDeviceName = new MutableLiveData<>("-");
-        mSamplingValue = new MutableLiveData<>(0);
+        mSamplingValue = new MutableLiveData<>(100);
         mTemperatures = new MutableLiveData<>(new ArrayList<>());
     }
 
@@ -62,7 +62,7 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public void setSampling(int value) {
-        if(mSamplingValue.getValue() != value)
+        if(mSamplingValue.getValue() != null && mSamplingValue.getValue() != value)
             mSamplingValue.setValue(value);
     }
 
@@ -123,7 +123,7 @@ public class DashboardViewModel extends ViewModel {
                 displayData(String.format("Button0: %d", value));
                 break;
             case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
-                int sampling = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
+                int sampling = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 100);
                 mSamplingValue.setValue(sampling);
                 displayData(String.format("Sampling: %d", sampling));
                 break;
@@ -146,8 +146,9 @@ public class DashboardViewModel extends ViewModel {
 
     private void updateTemperatureCollection(float temperature) {
         List<Float> values = mTemperatures.getValue();
+        Integer sampling = mSamplingValue.getValue();
         values.add(temperature);
-        while (values.size() > NUM_OF_TEMP_VALUES)
+        while (values.size() > SAMPLING_WINDOW / sampling)
             values.remove(0);
         mTemperatures.setValue(values);
     }
