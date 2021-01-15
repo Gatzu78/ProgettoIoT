@@ -1502,10 +1502,10 @@ void ProjectZero_clockHandler(UArg arg)
     case PZ_READ_TEMP_EVT:
     {
       // Restart timer
-      Util_startClock(&clkTempRead);
 
       // Let the application handle the event
       ProjectZero_enqueueMsg(PZ_READ_TEMP_EVT, NULL);
+      Util_startClock(&clkTempRead);
       break;
     }
 
@@ -2410,27 +2410,15 @@ static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
 // SUPSI
 static bStatus_t ProjectZero_readTemperature(void)
 {
-//  extern uint8_t ts_SampleVal[TS_SAMPLE_LEN];
-//  static int timer_delay = 1;
-//
-//  int sampling_ms = MAX(ts_SampleVal[0], 1) * CLK_READ_PERIOD_MS;
-//  int period_count = (sampling_ms / CLK_READ_PERIOD_MS);
-//  if(timer_delay < period_count) {
-//      // ritarda l'esecuzione fino al tempo di sampling
-//      timer_delay++;
-//      return SUCCESS;
-//  }
-//  timer_delay = 1;
-//
-  float s = ((float)Clock_getTicks()/10000.0);
+
+  float s = ((float)Clock_getTicks()/1000.0);
 
   // simula temperatura tra 15 e 25 gradi
-  //int count = Timer_getCount(timerHandle[1]);
-  float sVal = 5.0 * sin(2 * PI * s);
+  float sVal = 5.0 * sin(2 * PI * s * 0.1);
   float temperature =  20 + sVal;
 
   // Set profile value (and notify if notifications are enabled)
-  bStatus_t status = TempService_SetParameter(TS_TEMP_ID, TS_TEMP_LEN, &temperature);
+  bStatus_t status = TempService_SetParameter(TS_TEMP_ID, sizeof(temperature), &temperature);
 
   if (status != SUCCESS)
   {
