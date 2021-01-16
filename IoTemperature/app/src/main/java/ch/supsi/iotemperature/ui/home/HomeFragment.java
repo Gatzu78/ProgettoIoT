@@ -2,11 +2,13 @@ package ch.supsi.iotemperature.ui.home;
 
 import android.bluetooth.BluetoothDevice;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -20,6 +22,8 @@ import java.util.ArrayList;
 import ch.supsi.iotemperature.MainActivity;
 import ch.supsi.iotemperature.R;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
+
+import static ch.supsi.iotemperature.ui.home.HomeViewModel.SCAN_PERIOD;
 
 public class HomeFragment extends Fragment {
 
@@ -40,6 +44,8 @@ public class HomeFragment extends Fragment {
         homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
 
         View root = inflater.inflate(R.layout.fragment_home, container, false);
+
+        final ProgressBar progressBar = root.findViewById(R.id.progBar);
 
         // TITLE
         final TextView textView = root.findViewById(R.id.text_home);
@@ -71,6 +77,7 @@ public class HomeFragment extends Fragment {
         final Button scanButton = root.findViewById(R.id.btnScan);
         homeViewModel.getIsScanning()
                 .observe(getViewLifecycleOwner(), isScanning -> {
+                    progressBar.setVisibility(isScanning ? View.VISIBLE : View.INVISIBLE);
                     String text = isScanning ? "STOP" : "SCAN";
                     scanButton.setText(text);
                 });

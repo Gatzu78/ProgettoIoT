@@ -12,13 +12,14 @@ import androidx.lifecycle.ViewModel;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import ch.supsi.iotemperature.BluetoothLeService;
 import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardViewModel extends ViewModel {
     private final static String TAG = DashboardViewModel.class.getSimpleName();
-    private static final int SAMPLING_WINDOW = 10000;
+    private static final int SAMPLING_WINDOW = 50;
 
     private final MutableLiveData<String> mDeviceAddress;
     private final MutableLiveData<String> mDeviceName;
@@ -26,7 +27,6 @@ public class DashboardViewModel extends ViewModel {
     private final MutableLiveData<Boolean> mLED1On;
     private final MutableLiveData<List<String>> mLog;
     private final MutableLiveData<Integer> mSamplingValue;
-    //private final MutableLiveData<List<Integer>> mTemperatures;
     private final MutableLiveData<List<Float>> mTemperatures;
 
     public DashboardViewModel() {
@@ -42,7 +42,6 @@ public class DashboardViewModel extends ViewModel {
     }
 
     public LiveData<List<String>> getLog() { return mLog; }
-    //public LiveData<List<Integer>> getTemperatures() { return mTemperatures; }
     public LiveData<List<Float>> getTemperatures() { return mTemperatures; }
 
     public LiveData<Integer> getSamplingValue() {
@@ -120,22 +119,22 @@ public class DashboardViewModel extends ViewModel {
         switch (intent.getStringExtra(BluetoothLeService.EXTRA_CHARACTERISTIC)) {
             case SUPSIGattAttributes.BUTTON0_CHARACTERISTIC:
                 int value = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
-                displayData(String.format("Button0: %d", value));
+                displayData(String.format(Locale.ITALIAN, "Button0: %d", value));
                 break;
             case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
                 int sampling = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 100);
                 mSamplingValue.setValue(sampling);
-                displayData(String.format("Sampling: %d", sampling));
+                displayData(String.format(Locale.ITALIAN,"Sampling: %d", sampling));
                 break;
             case SUPSIGattAttributes.LED1_CHARACTERISTIC:
                 int led1Status = intent.getIntExtra(BluetoothLeService.EXTRA_DATA, 0);
                 mLED1On.setValue(led1Status == 1);
-                displayData(String.format("LED1: %d", led1Status));
+                displayData(String.format(Locale.ITALIAN,"LED1: %d", led1Status));
                 break;
             case SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC:
-                Float temperature = intent.getFloatExtra(BluetoothLeService.EXTRA_DATA, 0);
+                float temperature = intent.getFloatExtra(BluetoothLeService.EXTRA_DATA, 0);
                 updateTemperatureCollection(temperature);
-                displayData(String.format("Temperature: %f", temperature));
+                displayData(String.format(Locale.ITALIAN,"Temperature: %f", temperature));
                 break;
             default:
                 String extra = intent.getStringExtra(BluetoothLeService.EXTRA_DATA);
@@ -146,9 +145,8 @@ public class DashboardViewModel extends ViewModel {
 
     private void updateTemperatureCollection(float temperature) {
         List<Float> values = mTemperatures.getValue();
-        Integer sampling = mSamplingValue.getValue();
         values.add(temperature);
-        while (values.size() > SAMPLING_WINDOW / sampling)
+        while (values.size() > SAMPLING_WINDOW)
             values.remove(0);
         mTemperatures.setValue(values);
     }

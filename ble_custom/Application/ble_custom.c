@@ -2159,25 +2159,26 @@ void ProjectZero_TempService_ValueChangeHandler(
 
     switch(pCharData->paramID)
     {
-    case TS_SAMPLE_ID:
-        Log_info3("Value Change msg: %s %s: %s",
-                  (uintptr_t)"Temp Service",
-                  (uintptr_t)"Sample",
-                  (uintptr_t)pretty_data_holder);
+        case TS_SAMPLE_ID:
+        {
+            Log_info3("Value Change msg: %s %s: %s",
+                      (uintptr_t)"Temp Service",
+                      (uintptr_t)"Sample",
+                      (uintptr_t)pretty_data_holder);
 
-        // Do something useful with pCharData->data here
-        // -------------------------
-        // Set the timer 0 interval based on the input value
-        uint16_t myval = pCharData->data[1] << 8 | pCharData->data[0];
+            // Do something useful with pCharData->data here
+            // -------------------------
+            // Set the timer 0 interval based on the input value
+            uint16_t myval = BUILD_UINT16(pCharData->data[0], pCharData->data[1]);
 
-        Util_stopClock(&clkTempRead);
-        Util_restartClock(&clkTempRead, myval);
-        Util_startClock(&clkTempRead);
-        break;
+            //Util_stopClock(&clkTempRead);
+            Util_restartClock(&clkTempRead, myval);
+            //Util_startClock(&clkTempRead);
+            break;
+        }
 
-
-    default:
-        return;
+        default:
+            return;
     }
 }
 

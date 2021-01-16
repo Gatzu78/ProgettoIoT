@@ -21,16 +21,11 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
 
-import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
 import com.github.mikephil.charting.formatter.ValueFormatter;
-import com.github.mikephil.charting.interfaces.datasets.IBarDataSet;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.text.DecimalFormat;
@@ -44,6 +39,9 @@ import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardFragment extends Fragment {
     private final static String TAG = DashboardFragment.class.getSimpleName();
+    private final static int SAMPLING_MAX_VALUE = 2000;
+    private final static int SAMPLING_MIN_VALUE = 100;
+    private final static int SAMPLING_STEP = 10;
 
     private DashboardViewModel dashboardViewModel;
     private LogDataAdapter logDataAdapter;
@@ -108,9 +106,7 @@ public class DashboardFragment extends Fragment {
         dashboardViewModel.isLED1On().observe(getViewLifecycleOwner(), ledSwitch::setChecked);
 
         final Button btnConnect = root.findViewById(R.id.btnConnect);
-        btnConnect.setOnClickListener(view -> {
-            mainActivity.connect(mDeviceAddress);
-        });
+        btnConnect.setOnClickListener(view -> mainActivity.connect(mDeviceAddress));
 
         // CONNECTION STATE
         dashboardViewModel.getConnStatus().observe(getViewLifecycleOwner(), status -> {
@@ -179,15 +175,14 @@ public class DashboardFragment extends Fragment {
 
     public String[] getArrayWithSteps (int iMinValue, int iMaxValue, int iStep)
     {
-        int iStepsArray = (iMaxValue-iMinValue) / iStep+1; //get the lenght array that will return
-        String[] arrayValues= new String[iStepsArray]; //Create array with length of iStepsArray
-        for(int i = 0; i < iStepsArray; i++)
+        int arraySize = (iMaxValue - iMinValue) / iStep + 1;
+        String[] arrayValues= new String[arraySize];
+        for(int i = 0; i < arraySize; i++)
             arrayValues[i] = String.valueOf(iMinValue + (i * iStep));
         return arrayValues;
     }
 
     private void showSamplingDialog(MainActivity mainActivity) {
-        mainActivity.asyncReadSampling();
         final Dialog dialog = new Dialog(getContext());
         dialog.setContentView(R.layout.sampling_dialog);
 
@@ -196,16 +191,14 @@ public class DashboardFragment extends Fragment {
             if(value != null)
                 np.setValue(value);
         });
-        int minValue = 100;
-        int step = 10;
-        String[] values = getArrayWithSteps(minValue, 1000, step);
+        String[] values = getArrayWithSteps(SAMPLING_MIN_VALUE, SAMPLING_MAX_VALUE, SAMPLING_STEP);
         np.setDisplayedValues(values);
         np.setMinValue(1);
         np.setMaxValue(values.length);
 
         Button btnConfirm =  dialog.findViewById(R.id.btnConfirm);
         btnConfirm.setOnClickListener(view -> {
-            int value = minValue + (np.getValue() * step);
+            int value = SAMPLING_MIN_VALUE + ((np.getValue()-1) * SAMPLING_STEP);
             mainActivity.writeSampling(value);
             dashboardViewModel.setSampling(value);
             dialog.dismiss();
@@ -240,12 +233,13 @@ public class DashboardFragment extends Fragment {
 
         Bundle bundle = this.getArguments();
         if(bundle != null) {
-            // new device
+            // new device selected
             mDeviceAddress = bundle.getString(SUPSIGattAttributes.KEY_DEVICE_ADDRESS);
             mDeviceName = bundle.getString(SUPSIGattAttributes.KEY_DEVICE_NAME);
         }
 
         if(savedInstanceState != null) {
+            // latest device saved
             mDeviceAddress = savedInstanceState.getString(SUPSIGattAttributes.KEY_DEVICE_ADDRESS);
             mDeviceName = savedInstanceState.getString(SUPSIGattAttributes.KEY_DEVICE_NAME);
         }
@@ -263,6 +257,7 @@ public class DashboardFragment extends Fragment {
         Log.i(TAG, "**** onResume");
         super.onResume();
 
+        // try reconnect to the latest address
         MainActivity mainActivity = (MainActivity) getActivity();
         mainActivity.connect(mDeviceAddress);
     }
@@ -271,6 +266,7 @@ public class DashboardFragment extends Fragment {
     public void onSaveInstanceState(@NonNull Bundle outState) {
         Log.i(TAG, "**** onSaveInstanceState");
 
+        // store the last device name and address to try reconnect later
         outState.putString(SUPSIGattAttributes.KEY_DEVICE_ADDRESS, mDeviceAddress);
         outState.putString(SUPSIGattAttributes.KEY_DEVICE_NAME, mDeviceName);
 

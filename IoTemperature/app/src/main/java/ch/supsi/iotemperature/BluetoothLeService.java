@@ -241,19 +241,15 @@ public class BluetoothLeService extends Service {
         final Intent intent = new Intent(action);
         intent.putExtra(EXTRA_CHARACTERISTIC, characteristic.getUuid().toString());
 
-        int format = getCharacteristicFormat(characteristic);
-        int shift = format == BluetoothGattCharacteristic.FORMAT_UINT8 ? 8 : 16;
-//        Log.v(TAG, String.format("*** Characteristics %d bit format", shift));
-
         switch (characteristic.getUuid().toString()) {
             case SUPSIGattAttributes.TEMPERATURE_CHARACTERISTIC:
-                parseTemperatureCharacteristic(action, characteristic, intent, format, shift);
+                parseTemperatureCharacteristic(action, characteristic, intent);
                 break;
             case SUPSIGattAttributes.SAMPLING_CHARACTERISTIC:
-                parseSamplingCharacteristic(action, characteristic, intent, format, shift);
+                parseSamplingCharacteristic(action, characteristic, intent);
                 break;
             case SUPSIGattAttributes.LED1_CHARACTERISTIC:
-                parseLED1Characteristic(action, characteristic, intent, format, shift);
+                parseLED1Characteristic(action, characteristic, intent);
                 break;
             default:
                 parseUnknownCharacteristic(action, characteristic, intent);
@@ -262,7 +258,7 @@ public class BluetoothLeService extends Service {
         sendBroadcast(intent);
     }
 
-    private void parseTemperatureCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
+    private void parseTemperatureCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent) {
         final byte[] data = characteristic.getValue();
         Float temperatureValue = ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN).getFloat();
 //        Log.v(TAG, String.format("*** CURRENT TEMPERATURE [%s] Action [%s] Extra [%f]",
@@ -270,21 +266,24 @@ public class BluetoothLeService extends Service {
         intent.putExtra(EXTRA_DATA, temperatureValue);
     }
 
-    private void parseSamplingCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
-        int mSamplingValue = characteristic.getIntValue(format, 0);
+    private void parseSamplingCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent) {
+        int mSamplingValue = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT16, 0);
         Log.d(TAG, String.format("*** CURRENT SAMPLING [%s] Action [%s] Extra [%d]",
                 characteristic.getUuid(), action, mSamplingValue));
         intent.putExtra(EXTRA_DATA, mSamplingValue);
     }
 
-    private void parseLED1Characteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent, int format, int shift) {
-        mLED1Value = characteristic.getIntValue(format, 0);
+    private void parseLED1Characteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent) {
+        mLED1Value = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
         Log.d(TAG, String.format("*** CURRENT LED1 [%s] Action [%s] Extra [%d]",
                 characteristic.getUuid(), action, mLED1Value));
         intent.putExtra(EXTRA_DATA, mLED1Value);
     }
 
     private void parseUnknownCharacteristic(String action, BluetoothGattCharacteristic characteristic, Intent intent) {
+//        int flag = characteristic.getProperties();
+//        int format = ((flag & 0x01) != 0) ? BluetoothGattCharacteristic.FORMAT_UINT16 : BluetoothGattCharacteristic.FORMAT_UINT8;
+
         // For all other profiles, writes the data formatted in HEX.
         final byte[] data = characteristic.getValue();
         if (data != null && data.length > 0) {
@@ -297,13 +296,6 @@ public class BluetoothLeService extends Service {
                     characteristic.getUuid(), action, extra));
             intent.putExtra(EXTRA_DATA, extra);
         }
-    }
-
-    private int getCharacteristicFormat(BluetoothGattCharacteristic characteristic) {
-        int flag = characteristic.getProperties();
-        return ((flag & 0x01) != 0) ?
-                BluetoothGattCharacteristic.FORMAT_UINT16 :
-                BluetoothGattCharacteristic.FORMAT_UINT8;
     }
 
     public void asyncReadSampling() {
