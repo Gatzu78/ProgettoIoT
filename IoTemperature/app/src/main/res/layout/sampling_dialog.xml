@@ -12,7 +12,7 @@
         android:background="?attr/colorPrimary"
         android:minHeight="?attr/actionBarSize"
         android:theme="?attr/actionBarTheme"
-        app:title="Sampling (sec)"/>
+        app:title="Sampling (ms)"/>
 
     <NumberPicker
         android:id="@+id/numSampling"

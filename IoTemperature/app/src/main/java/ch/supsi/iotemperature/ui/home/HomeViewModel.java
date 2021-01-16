@@ -26,10 +26,10 @@ public class HomeViewModel extends ViewModel {
 
     private Handler handler = new Handler();
 
-    // Stops scanning after 20 seconds.
+    // Stops scanning after 10 seconds.
     public static final long SCAN_PERIOD = 10000;
-    private static final String MATCH_PATTERN_NAME = "SUPSI"; //"SUPSI IoT"
-    private static final String MATCH_PATTERN_ADDR = ""; //"80:6f:b0"
+    private static final String MATCH_PATTERN_NAME = "SUPSI IoT";
+    private static final String MATCH_PATTERN_ADDR = "80:6F:B0";
 
     public HomeViewModel() {
         mScanning = new MutableLiveData<>(false);
