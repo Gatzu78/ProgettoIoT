@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +23,8 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.fragment.NavHostFragment;
 
 import com.github.mikephil.charting.charts.LineChart;
+import com.github.mikephil.charting.components.XAxis;
+import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
@@ -29,6 +32,8 @@ import com.github.mikephil.charting.formatter.ValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
 import java.text.DecimalFormat;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,10 +44,14 @@ import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardFragment extends Fragment {
     private final static String TAG = DashboardFragment.class.getSimpleName();
+
+    private static final int MIN_TEMPERATURE = 14;
+    private static final int MAX_TEMPERATURE = 26;
     private final static int SAMPLING_MAX_VALUE = 2000;
     private final static int SAMPLING_MIN_VALUE = 100;
     private final static int SAMPLING_STEP = 10;
 
+    private Dialog mDialog;
     private DashboardViewModel dashboardViewModel;
     private LogDataAdapter logDataAdapter;
     private String mDeviceAddress;
@@ -57,10 +66,15 @@ public class DashboardFragment extends Fragment {
         actionBar.setDisplayHomeAsUpEnabled(true);
         actionBar.setDisplayShowHomeEnabled(true);
 
+        initToolbar(mainActivity);
+        initDialog(mainActivity);
+    }
+
+    private void initToolbar(MainActivity mainActivity) {
         Toolbar toolbar = mainActivity.findViewById(R.id.toolbar);
         toolbar.inflateMenu(R.menu.menu_main);
         toolbar.getMenu().findItem(R.id.action_sampling).setOnMenuItemClickListener(i -> {
-            showSamplingDialog(mainActivity);
+            mDialog.show();
             return true;
         });
         toolbar.getMenu().findItem(R.id.action_led).setOnMenuItemClickListener(i -> {
@@ -71,6 +85,10 @@ public class DashboardFragment extends Fragment {
             mainActivity.asyncReadTemperature();
             return true;
         });
+        toolbar.getMenu().findItem(R.id.disconnect).setOnMenuItemClickListener(i -> {
+            mainActivity.disconnect();
+            return true;
+        });
 
         toolbar.setNavigationOnClickListener(v -> {
             mainActivity.disconnect();
@@ -78,6 +96,34 @@ public class DashboardFragment extends Fragment {
             NavHostFragment.findNavController(DashboardFragment.this)
                     .navigate(R.id.action_DashboardFragment_to_HomeFragment);
         });
+    }
+
+    private void initDialog(MainActivity mainActivity) {
+        mDialog = new Dialog(getContext());
+        mDialog.setContentView(R.layout.sampling_dialog);
+
+        final NumberPicker np = mDialog.findViewById(R.id.numSampling);
+        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
+            if(value != null) {
+                int index = (value - SAMPLING_MIN_VALUE) / SAMPLING_STEP + 1;
+                np.setValue(index);
+            }
+        });
+        String[] values = getArrayWithSteps(SAMPLING_MIN_VALUE, SAMPLING_MAX_VALUE, SAMPLING_STEP);
+        np.setDisplayedValues(values);
+        np.setMinValue(1);
+        np.setMaxValue(values.length);
+
+        Button btnConfirm =  mDialog.findViewById(R.id.btnConfirm);
+        btnConfirm.setOnClickListener(view -> {
+            int value = SAMPLING_MIN_VALUE + ((np.getValue()-1) * SAMPLING_STEP);
+            mainActivity.writeSampling(value);
+            dashboardViewModel.setSampling(value);
+            mDialog.dismiss();
+        });
+
+        Button btnCancel = mDialog.findViewById(R.id.btnCancel);
+        btnCancel.setOnClickListener(view -> mDialog.dismiss());
     }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
@@ -127,12 +173,9 @@ public class DashboardFragment extends Fragment {
         });
 
         // CHART
-        // Sostituito con LineChart
-        //final BarChart chart = root.findViewById(R.id.chart);
         final LineChart chart = root.findViewById(R.id.chart);
         setChartSettings(chart);
         dashboardViewModel.getTemperatures().observe(getViewLifecycleOwner(), temperatures -> {
-            //BarData data = transformData(temperatures);
             LineData data = transformData(temperatures);
             chart.setData(data);
             chart.invalidate();
@@ -144,29 +187,46 @@ public class DashboardFragment extends Fragment {
     private void setChartSettings(LineChart chart) {
         chart.getDescription().setEnabled(false);
         chart.setDrawGridBackground(false);
-        // Set Y Axis boundaries
-        chart.getAxisLeft().setAxisMaximum(26);
-        chart.getAxisLeft().setAxisMinimum(14);
-        chart.getAxisLeft().setValueFormatter(new ValueFormatter() {
+
+        // Y Axis (temperature)
+        YAxis yAxis = chart.getAxisLeft();
+        yAxis.setAxisMinimum(MIN_TEMPERATURE);
+        yAxis.setAxisMaximum(MAX_TEMPERATURE);
+        yAxis.setValueFormatter(new ValueFormatter() {
             private final DecimalFormat mFormat= new DecimalFormat("0.0");
             @Override
             public String getFormattedValue(float value) {
                 return mFormat.format(value);
             }
         });
+
+        // X Axis (time)
+        XAxis xAxis = chart.getXAxis();
+        xAxis.setValueFormatter(new ValueFormatter() {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ss");
+
+            @Override
+            public String getFormattedValue(float value) {
+                LocalTime time = LocalTime.ofNanoOfDay((long)value);
+                return formatter.format(time);
+            }
+        });
+
         // Hide Right Axis
         chart.getAxisRight().setEnabled(false);
-        // Hide X Axis
-        chart.getXAxis().setEnabled(false);
     }
 
-    private LineData transformData(List<Float> itemList){
+    private LineData transformData(List<Pair<LocalTime, Float>> itemList){
         ArrayList<Entry> data = new ArrayList<>();
-        for (int i=0; i<itemList.size(); i++)
-            data.add(new Entry(i, itemList.get(i)));
+        for (Pair<LocalTime, Float> entry : itemList) {
+            long x = entry.first.toNanoOfDay();
+            data.add(new Entry(x, entry.second));
+        }
 
         LineDataSet dataSet = new LineDataSet(data, "Temperature");
         dataSet.setColor(Color.BLUE);
+        dataSet.setCircleColor(Color.BLACK);
+        dataSet.setDrawValues(false);
 
         ArrayList<ILineDataSet> dataSets = new ArrayList<>();
         dataSets.add(dataSet);
@@ -176,38 +236,10 @@ public class DashboardFragment extends Fragment {
     public String[] getArrayWithSteps (int iMinValue, int iMaxValue, int iStep)
     {
         int arraySize = (iMaxValue - iMinValue) / iStep + 1;
-        String[] arrayValues= new String[arraySize];
+        String[] arrayValues = new String[arraySize];
         for(int i = 0; i < arraySize; i++)
             arrayValues[i] = String.valueOf(iMinValue + (i * iStep));
         return arrayValues;
-    }
-
-    private void showSamplingDialog(MainActivity mainActivity) {
-        final Dialog dialog = new Dialog(getContext());
-        dialog.setContentView(R.layout.sampling_dialog);
-
-        final NumberPicker np = dialog.findViewById(R.id.numSampling);
-        dashboardViewModel.getSamplingValue().observe(getViewLifecycleOwner(), value -> {
-            if(value != null)
-                np.setValue(value);
-        });
-        String[] values = getArrayWithSteps(SAMPLING_MIN_VALUE, SAMPLING_MAX_VALUE, SAMPLING_STEP);
-        np.setDisplayedValues(values);
-        np.setMinValue(1);
-        np.setMaxValue(values.length);
-
-        Button btnConfirm =  dialog.findViewById(R.id.btnConfirm);
-        btnConfirm.setOnClickListener(view -> {
-            int value = SAMPLING_MIN_VALUE + ((np.getValue()-1) * SAMPLING_STEP);
-            mainActivity.writeSampling(value);
-            dashboardViewModel.setSampling(value);
-            dialog.dismiss();
-        });
-
-        Button btnCancel = dialog.findViewById(R.id.btnCancel);
-        btnCancel.setOnClickListener(view -> dialog.dismiss());
-
-        dialog.show();
     }
 
     @Override

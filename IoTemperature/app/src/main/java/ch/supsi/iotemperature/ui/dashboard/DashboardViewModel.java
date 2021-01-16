@@ -5,11 +5,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.util.Log;
+import android.util.Pair;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -19,7 +21,8 @@ import ch.supsi.iotemperature.SUPSIGattAttributes;
 
 public class DashboardViewModel extends ViewModel {
     private final static String TAG = DashboardViewModel.class.getSimpleName();
-    private static final int SAMPLING_WINDOW = 50;
+    private static final long SAMPLING_WINDOW_MS = 10000;
+    private static final int DEFAULT_SAMPLING_MS = 100;
 
     private final MutableLiveData<String> mDeviceAddress;
     private final MutableLiveData<String> mDeviceName;
@@ -27,7 +30,7 @@ public class DashboardViewModel extends ViewModel {
     private final MutableLiveData<Boolean> mLED1On;
     private final MutableLiveData<List<String>> mLog;
     private final MutableLiveData<Integer> mSamplingValue;
-    private final MutableLiveData<List<Float>> mTemperatures;
+    private final MutableLiveData<List<Pair<LocalTime, Float>>> mTemperatures;
 
     public DashboardViewModel() {
         Log.i(TAG, "**** NEW DashboardViewModel");
@@ -37,12 +40,12 @@ public class DashboardViewModel extends ViewModel {
         mConnectionStatus = new MutableLiveData<>(BluetoothLeService.STATE_CONNECTING);
         mDeviceAddress = new MutableLiveData<>("-");
         mDeviceName = new MutableLiveData<>("-");
-        mSamplingValue = new MutableLiveData<>(100);
+        mSamplingValue = new MutableLiveData<>(DEFAULT_SAMPLING_MS);
         mTemperatures = new MutableLiveData<>(new ArrayList<>());
     }
 
     public LiveData<List<String>> getLog() { return mLog; }
-    public LiveData<List<Float>> getTemperatures() { return mTemperatures; }
+    public LiveData<List<Pair<LocalTime, Float>>> getTemperatures() { return mTemperatures; }
 
     public LiveData<Integer> getSamplingValue() {
         return mSamplingValue;
@@ -144,10 +147,16 @@ public class DashboardViewModel extends ViewModel {
     }
 
     private void updateTemperatureCollection(float temperature) {
-        List<Float> values = mTemperatures.getValue();
-        values.add(temperature);
-        while (values.size() > SAMPLING_WINDOW)
+        LocalTime now = LocalTime.now();
+        List<Pair<LocalTime, Float>> values = mTemperatures.getValue();
+        values.add(new Pair<>(now, temperature));
+
+        while (isInSamplingWindow(values.get(0).first, now))
             values.remove(0);
         mTemperatures.setValue(values);
+    }
+
+    private boolean isInSamplingWindow(LocalTime time, LocalTime now) {
+        return time.plusNanos(SAMPLING_WINDOW_MS * 1_000_000).isBefore(now);
     }
 }

@@ -410,6 +410,7 @@ public class BluetoothLeService extends Service {
 
         Log.d(TAG, "*** disconnect and close");
         mBluetoothGatt.disconnect();
+        broadcastUpdate(ACTION_GATT_DISCONNECTED);
         mBluetoothGatt.close();
         mBluetoothGatt = null;
         mBluetoothDeviceAddress = null;
