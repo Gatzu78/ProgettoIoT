@@ -175,11 +175,8 @@ public class DashboardFragment extends Fragment {
         // CHART
         final LineChart chart = root.findViewById(R.id.chart);
         setChartSettings(chart);
-        dashboardViewModel.getTemperatures().observe(getViewLifecycleOwner(), temperatures -> {
-            LineData data = transformData(temperatures);
-            chart.setData(data);
-            chart.invalidate();
-        });
+        dashboardViewModel.getTemperatures()
+                .observe(getViewLifecycleOwner(), temperatures -> updateChart(chart, temperatures));
 
         return root;
     }
@@ -193,7 +190,7 @@ public class DashboardFragment extends Fragment {
         yAxis.setAxisMinimum(MIN_TEMPERATURE);
         yAxis.setAxisMaximum(MAX_TEMPERATURE);
         yAxis.setValueFormatter(new ValueFormatter() {
-            private final DecimalFormat mFormat= new DecimalFormat("0.0");
+            private final DecimalFormat mFormat= new DecimalFormat("0");
             @Override
             public String getFormattedValue(float value) {
                 return mFormat.format(value);
@@ -203,7 +200,7 @@ public class DashboardFragment extends Fragment {
         // X Axis (time)
         XAxis xAxis = chart.getXAxis();
         xAxis.setValueFormatter(new ValueFormatter() {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ss");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("ss.SS");
 
             @Override
             public String getFormattedValue(float value) {
@@ -216,21 +213,27 @@ public class DashboardFragment extends Fragment {
         chart.getAxisRight().setEnabled(false);
     }
 
-    private LineData transformData(List<Pair<LocalTime, Float>> itemList){
+    private static int mLineColor = Color.rgb(0x1a, 0x50, 0x8b);
+    private static int mCircleColor = Color.rgb(0x0d, 0x33, 0x5d);
+    private void updateChart(LineChart chart, List<Pair<LocalTime, Float>> temperatures) {
         ArrayList<Entry> data = new ArrayList<>();
-        for (Pair<LocalTime, Float> entry : itemList) {
+        for (Pair<LocalTime, Float> entry : temperatures) {
             long x = entry.first.toNanoOfDay();
             data.add(new Entry(x, entry.second));
         }
 
         LineDataSet dataSet = new LineDataSet(data, "Temperature");
-        dataSet.setColor(Color.BLUE);
-        dataSet.setCircleColor(Color.BLACK);
+        dataSet.setColor(mLineColor);
+        dataSet.setCircleHoleColor(mLineColor);
+        dataSet.setCircleColor(mCircleColor);
+        dataSet.setCircleRadius(1.3f);
         dataSet.setDrawValues(false);
 
         ArrayList<ILineDataSet> dataSets = new ArrayList<>();
         dataSets.add(dataSet);
-        return new LineData(dataSets);
+        LineData lineData = new LineData(dataSets);
+        chart.setData(lineData);
+        chart.invalidate();
     }
 
     public String[] getArrayWithSteps (int iMinValue, int iMaxValue, int iStep)

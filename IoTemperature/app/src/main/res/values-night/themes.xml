@@ -13,4 +13,16 @@
         <item name="android:statusBarColor" tools:targetApi="l">?attr/colorPrimaryVariant</item>
         <!-- Customize your theme here. -->
     </style>
+
+    <style name="Theme.IoTemperature.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.IoTemperature.Toolbar" parent="Theme.IoTemperature">
+        <item name="android:textColorPrimary">@android:color/white</item>
+        <item name="android:colorControlNormal">@color/white</item>
+    </style>
+
+    <style name="Theme.IoTemperature.PopupOverlay" parent="ThemeOverlay.AppCompat.Dark" />
 </resources>

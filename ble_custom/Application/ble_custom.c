@@ -100,13 +100,6 @@
 #define UTIL_ARRTOHEX_REVERSE     1
 #define UTIL_ARRTOHEX_NO_REVERSE  0
 
-/*********************************************************************
- * CONSTANTS
- */
-#ifndef PI
-#define PI 3.14159265
-#endif
-
 // Task configuration
 #define PZ_TASK_PRIORITY                     1
 
@@ -2191,10 +2184,10 @@ static void ProjectZero_passcodeCb(uint8_t *pDeviceAddr,
 static bStatus_t ProjectZero_readTemperature(void)
 {
 
-  float s = ((float)Clock_getTicks()/10000.0);
+  double s = ((double)Clock_getTicks()/1000000.0);
 
   // simula temperatura tra 15 e 25 gradi
-  float sVal = 5.0 * sin(2 * PI * s * 0.1);
+  float sVal = 5.0 * sin(2 * M_PI * s);
   float temperature =  20 + sVal;
 
   // Set profile value (and notify if notifications are enabled)
